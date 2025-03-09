@@ -182,31 +182,31 @@ def scrape_all_match_results():
             "team1": {},
             "team2": {},
         },
-        # "round1": {
-        #     "round_info": {},
-        #     "team1": {"stats": {}},
-        #     "team2": {"stats": {}},
-        # },
-        # "round2": {
-        #     "round_info": {},
-        #     "team1": {"stats": {}},
-        #     "team2": {"stats": {}},
-        # },
-        # "round3": {
-        #     "round_info": {},
-        #     "team1": {"stats": {}},
-        #     "team2": {"stats": {}},
-        # },
-        # "round4": {
-        #     "round_info": {},
-        #     "team1": {"stats": {}},
-        #     "team2": {"stats": {}},
-        # },
-        # "round5": {
-        #     "round_info": {},
-        #     "team1": {"stats": {}},
-        #     "team2": {"stats": {}},
-        # },
+        "round1": {
+            "round_info": {},
+            "team1": {},
+            "team2": {},
+        },
+        "round2": {
+            "round_info": {},
+            "team1": {},
+            "team2": {},
+        },
+        "round3": {
+            "round_info": {},
+            "team1": {},
+            "team2": {},
+        },
+        "round4": {
+            "round_info": {},
+            "team1": {},
+            "team2": {},
+        },
+        "round5": {
+            "round_info": {},
+            "team1": {},
+            "team2": {},
+        },
     }
     rounds = match_soup.select("div.vm-stats-game")
     for idx, round in enumerate(rounds):
@@ -214,23 +214,252 @@ def scrape_all_match_results():
             case 0:
                 """Round 1"""
                 stats["round1"]["round_info"]["map_name"] = (
-                    round.select_one("div.map span").getText().strip()
+                    round.select_one("div.map > div > span")
+                    .getText()
+                    .replace("PICK", "")
+                    .strip()
                 )
                 stats["round1"]["round_info"]["map_duration"] = (
-                    round.select_one("div.map_duration").getText().strip()
+                    round.select_one(".map-duration").getText().strip()
                 )
+
+                team_tables = round.select("table")
+                team1_table = team_tables[0]
+                team2_table = team_tables[1]
+
+                team1_players = team1_table.select("tbody tr")
+                team2_players = team2_table.select("tbody tr")
+
+                for players in team1_players:
+                    player_stats = players.select("td")
+                    for i, single_stat in enumerate(player_stats):
+                        match i:
+                            case 0:
+                                # class="mod-player"
+                                player_name = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stats["round1"]["team1"][player_name] = {}
+                                stats["round1"]["team1"][player_name]["country"] = (
+                                    "".join(
+                                        single_stat.select_one("i").get("class")
+                                    ).replace("mod", "")
+                                )
+                            case 1:
+                                # class="mod-agents"
+                                agents_list = []
+                                agents = single_stat.select("span.mod-agent")
+                                for agent in agents:
+                                    agents_list.append(
+                                        agent.select_one("img").get("title").strip()
+                                    )
+                                stats["round1"]["team1"][player_name][
+                                    "agents"
+                                ] = agents_list
+                            case 2:
+                                # class="mod-stat"
+                                stats["round1"]["team1"][player_name]["rating"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 3:
+                                # class="mod-stat"
+                                stats["round1"]["team1"][player_name]["ACS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 4:
+                                # class="mod-stat mod-vlr-kills"
+                                stats["round1"]["team1"][player_name]["K"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 5:
+                                # class="mod-stat mod-vlr-deaths"
+                                stats["round1"]["team1"][player_name]["D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 6:
+                                # class="mod-stat mod-vlr-assists"
+                                stats["round1"]["team1"][player_name]["A"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 7:
+                                # class="mod-stat mod-kd-diff"
+                                stats["round1"]["team1"][player_name]["Diff_K_D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 8:
+                                # class="mod-stat"
+                                stats["round1"]["team1"][player_name]["KAST"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 9:
+                                # class="mod-stat"
+                                stats["round1"]["team1"][player_name]["ADR"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 10:
+                                # class="mod-stat"
+                                stats["round1"]["team1"][player_name]["HS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 11:
+                                # class="mod-stats mod-fb"
+                                stats["round1"]["team1"][player_name]["FK"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 12:
+                                # class="mod-stats mod-fd"
+                                stats["round1"]["team1"][player_name]["FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 13:
+                                # class="mod-stats mod-fk-diff"
+                                stats["round1"]["team1"][player_name]["Diff_FK_FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+
+                for players in team2_players:
+                    player_stats = players.select("td")
+                    for i, single_stat in enumerate(player_stats):
+                        match i:
+                            case 0:
+                                # class="mod-player"
+                                player_name = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stats["round1"]["team2"][player_name] = {}
+                                stats["round1"]["team2"][player_name]["country"] = (
+                                    "".join(
+                                        single_stat.select_one("i").get("class")
+                                    ).replace("mod", "")
+                                )
+                            case 1:
+                                # class="mod-agents"
+                                agents_list = []
+                                agents = single_stat.select("span.mod-agent")
+                                for agent in agents:
+                                    agents_list.append(
+                                        agent.select_one("img").get("title").strip()
+                                    )
+                                stats["round1"]["team2"][player_name][
+                                    "agents"
+                                ] = agents_list
+                            case 2:
+                                # class="mod-stat"
+                                stats["round1"]["team2"][player_name]["rating"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 3:
+                                # class="mod-stat"
+                                stats["round1"]["team2"][player_name]["ACS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 4:
+                                # class="mod-stat mod-vlr-kills"
+                                stats["round1"]["team2"][player_name]["K"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 5:
+                                # class="mod-stat mod-vlr-deaths"
+                                stats["round1"]["team2"][player_name]["D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 6:
+                                # class="mod-stat mod-vlr-assists"
+                                stats["round1"]["team2"][player_name]["A"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 7:
+                                # class="mod-stat mod-kd-diff"
+                                stats["round1"]["team2"][player_name]["Diff_K_D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 8:
+                                # class="mod-stat"
+                                stats["round1"]["team2"][player_name]["KAST"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 9:
+                                # class="mod-stat"
+                                stats["round1"]["team2"][player_name]["ADR"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 10:
+                                # class="mod-stat"
+                                stats["round1"]["team2"][player_name]["HS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 11:
+                                # class="mod-stats mod-fb"
+                                stats["round1"]["team2"][player_name]["FK"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 12:
+                                # class="mod-stats mod-fd"
+                                stats["round1"]["team2"][player_name]["FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 13:
+                                # class="mod-stats mod-fk-diff"
+                                stats["round1"]["team2"][player_name]["Diff_FK_FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
 
             case 1:
                 """All Rounds"""
-                team1_div = round.select_one(
-                    "div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1)"
-                )
-                team2_div = round.select_one(
-                    "div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2)"
-                )
+                team_tables = round.select("table")
+                team1_table = team_tables[0]
+                team2_table = team_tables[1]
 
-                team1_players = team1_div.select("tbody tr")
-                team2_players = team2_div.select("tbody tr")
+                team1_players = team1_table.select("tbody tr")
+                team2_players = team2_table.select("tbody tr")
 
                 for players in team1_players:
                     player_stats = players.select("td")
@@ -464,19 +693,967 @@ def scrape_all_match_results():
 
             case 2:
                 """Round 2"""
-                continue
+                stats["round2"]["round_info"]["map_name"] = (
+                    round.select_one("div.map > div > span")
+                    .getText()
+                    .replace("PICK", "")
+                    .strip()
+                )
+                stats["round2"]["round_info"]["map_duration"] = (
+                    round.select_one(".map-duration").getText().strip()
+                )
+
+                team_tables = round.select("table")
+                team1_table = team_tables[0]
+                team2_table = team_tables[1]
+
+                team1_players = team1_table.select("tbody tr")
+                team2_players = team2_table.select("tbody tr")
+
+                for players in team1_players:
+                    player_stats = players.select("td")
+                    for i, single_stat in enumerate(player_stats):
+                        match i:
+                            case 0:
+                                # class="mod-player"
+                                player_name = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stats["round2"]["team1"][player_name] = {}
+                                stats["round2"]["team1"][player_name]["country"] = (
+                                    "".join(
+                                        single_stat.select_one("i").get("class")
+                                    ).replace("mod", "")
+                                )
+                            case 1:
+                                # class="mod-agents"
+                                agents_list = []
+                                agents = single_stat.select("span.mod-agent")
+                                for agent in agents:
+                                    agents_list.append(
+                                        agent.select_one("img").get("title").strip()
+                                    )
+                                stats["round2"]["team1"][player_name][
+                                    "agents"
+                                ] = agents_list
+                            case 2:
+                                # class="mod-stat"
+                                stats["round2"]["team1"][player_name]["rating"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 3:
+                                # class="mod-stat"
+                                stats["round2"]["team1"][player_name]["ACS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 4:
+                                # class="mod-stat mod-vlr-kills"
+                                stats["round2"]["team1"][player_name]["K"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 5:
+                                # class="mod-stat mod-vlr-deaths"
+                                stats["round2"]["team1"][player_name]["D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 6:
+                                # class="mod-stat mod-vlr-assists"
+                                stats["round2"]["team1"][player_name]["A"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 7:
+                                # class="mod-stat mod-kd-diff"
+                                stats["round2"]["team1"][player_name]["Diff_K_D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 8:
+                                # class="mod-stat"
+                                stats["round2"]["team1"][player_name]["KAST"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 9:
+                                # class="mod-stat"
+                                stats["round2"]["team1"][player_name]["ADR"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 10:
+                                # class="mod-stat"
+                                stats["round2"]["team1"][player_name]["HS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 11:
+                                # class="mod-stats mod-fb"
+                                stats["round2"]["team1"][player_name]["FK"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 12:
+                                # class="mod-stats mod-fd"
+                                stats["round2"]["team1"][player_name]["FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 13:
+                                # class="mod-stats mod-fk-diff"
+                                stats["round2"]["team1"][player_name]["Diff_FK_FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+
+                for players in team2_players:
+                    player_stats = players.select("td")
+                    for i, single_stat in enumerate(player_stats):
+                        match i:
+                            case 0:
+                                # class="mod-player"
+                                player_name = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stats["round2"]["team2"][player_name] = {}
+                                stats["round2"]["team2"][player_name]["country"] = (
+                                    "".join(
+                                        single_stat.select_one("i").get("class")
+                                    ).replace("mod", "")
+                                )
+                            case 1:
+                                # class="mod-agents"
+                                agents_list = []
+                                agents = single_stat.select("span.mod-agent")
+                                for agent in agents:
+                                    agents_list.append(
+                                        agent.select_one("img").get("title").strip()
+                                    )
+                                stats["round2"]["team2"][player_name][
+                                    "agents"
+                                ] = agents_list
+                            case 2:
+                                # class="mod-stat"
+                                stats["round2"]["team2"][player_name]["rating"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 3:
+                                # class="mod-stat"
+                                stats["round2"]["team2"][player_name]["ACS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 4:
+                                # class="mod-stat mod-vlr-kills"
+                                stats["round2"]["team2"][player_name]["K"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 5:
+                                # class="mod-stat mod-vlr-deaths"
+                                stats["round2"]["team2"][player_name]["D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 6:
+                                # class="mod-stat mod-vlr-assists"
+                                stats["round2"]["team2"][player_name]["A"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 7:
+                                # class="mod-stat mod-kd-diff"
+                                stats["round2"]["team2"][player_name]["Diff_K_D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 8:
+                                # class="mod-stat"
+                                stats["round2"]["team2"][player_name]["KAST"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 9:
+                                # class="mod-stat"
+                                stats["round2"]["team2"][player_name]["ADR"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 10:
+                                # class="mod-stat"
+                                stats["round2"]["team2"][player_name]["HS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 11:
+                                # class="mod-stats mod-fb"
+                                stats["round2"]["team2"][player_name]["FK"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 12:
+                                # class="mod-stats mod-fd"
+                                stats["round2"]["team2"][player_name]["FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 13:
+                                # class="mod-stats mod-fk-diff"
+                                stats["round2"]["team2"][player_name]["Diff_FK_FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
 
             case 3:
                 """Round 3"""
-                continue
+                stats["round3"]["round_info"]["map_name"] = (
+                    round.select_one("div.map > div > span")
+                    .getText()
+                    .replace("PICK", "")
+                    .strip()
+                )
+                stats["round3"]["round_info"]["map_duration"] = (
+                    round.select_one(".map-duration").getText().strip()
+                )
+
+                team_tables = round.select("table")
+                team1_table = team_tables[0]
+                team2_table = team_tables[1]
+
+                team1_players = team1_table.select("tbody tr")
+                team2_players = team2_table.select("tbody tr")
+
+                for players in team1_players:
+                    player_stats = players.select("td")
+                    for i, single_stat in enumerate(player_stats):
+                        match i:
+                            case 0:
+                                # class="mod-player"
+                                player_name = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stats["round3"]["team1"][player_name] = {}
+                                stats["round3"]["team1"][player_name]["country"] = (
+                                    "".join(
+                                        single_stat.select_one("i").get("class")
+                                    ).replace("mod", "")
+                                )
+                            case 1:
+                                # class="mod-agents"
+                                agents_list = []
+                                agents = single_stat.select("span.mod-agent")
+                                for agent in agents:
+                                    agents_list.append(
+                                        agent.select_one("img").get("title").strip()
+                                    )
+                                stats["round3"]["team1"][player_name][
+                                    "agents"
+                                ] = agents_list
+                            case 2:
+                                # class="mod-stat"
+                                stats["round3"]["team1"][player_name]["rating"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 3:
+                                # class="mod-stat"
+                                stats["round3"]["team1"][player_name]["ACS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 4:
+                                # class="mod-stat mod-vlr-kills"
+                                stats["round3"]["team1"][player_name]["K"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 5:
+                                # class="mod-stat mod-vlr-deaths"
+                                stats["round3"]["team1"][player_name]["D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 6:
+                                # class="mod-stat mod-vlr-assists"
+                                stats["round3"]["team1"][player_name]["A"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 7:
+                                # class="mod-stat mod-kd-diff"
+                                stats["round3"]["team1"][player_name]["Diff_K_D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 8:
+                                # class="mod-stat"
+                                stats["round3"]["team1"][player_name]["KAST"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 9:
+                                # class="mod-stat"
+                                stats["round3"]["team1"][player_name]["ADR"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 10:
+                                # class="mod-stat"
+                                stats["round3"]["team1"][player_name]["HS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 11:
+                                # class="mod-stats mod-fb"
+                                stats["round3"]["team1"][player_name]["FK"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 12:
+                                # class="mod-stats mod-fd"
+                                stats["round3"]["team1"][player_name]["FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 13:
+                                # class="mod-stats mod-fk-diff"
+                                stats["round3"]["team1"][player_name]["Diff_FK_FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+
+                for players in team2_players:
+                    player_stats = players.select("td")
+                    for i, single_stat in enumerate(player_stats):
+                        match i:
+                            case 0:
+                                # class="mod-player"
+                                player_name = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stats["round3"]["team2"][player_name] = {}
+                                stats["round3"]["team2"][player_name]["country"] = (
+                                    "".join(
+                                        single_stat.select_one("i").get("class")
+                                    ).replace("mod", "")
+                                )
+                            case 1:
+                                # class="mod-agents"
+                                agents_list = []
+                                agents = single_stat.select("span.mod-agent")
+                                for agent in agents:
+                                    agents_list.append(
+                                        agent.select_one("img").get("title").strip()
+                                    )
+                                stats["round3"]["team2"][player_name][
+                                    "agents"
+                                ] = agents_list
+                            case 2:
+                                # class="mod-stat"
+                                stats["round3"]["team2"][player_name]["rating"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 3:
+                                # class="mod-stat"
+                                stats["round3"]["team2"][player_name]["ACS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 4:
+                                # class="mod-stat mod-vlr-kills"
+                                stats["round3"]["team2"][player_name]["K"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 5:
+                                # class="mod-stat mod-vlr-deaths"
+                                stats["round3"]["team2"][player_name]["D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 6:
+                                # class="mod-stat mod-vlr-assists"
+                                stats["round3"]["team2"][player_name]["A"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 7:
+                                # class="mod-stat mod-kd-diff"
+                                stats["round3"]["team2"][player_name]["Diff_K_D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 8:
+                                # class="mod-stat"
+                                stats["round3"]["team2"][player_name]["KAST"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 9:
+                                # class="mod-stat"
+                                stats["round3"]["team2"][player_name]["ADR"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 10:
+                                # class="mod-stat"
+                                stats["round3"]["team2"][player_name]["HS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 11:
+                                # class="mod-stats mod-fb"
+                                stats["round3"]["team2"][player_name]["FK"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 12:
+                                # class="mod-stats mod-fd"
+                                stats["round3"]["team2"][player_name]["FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 13:
+                                # class="mod-stats mod-fk-diff"
+                                stats["round3"]["team2"][player_name]["Diff_FK_FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
 
             case 4:
                 """Round 4"""
-                continue
+                stats["round4"]["round_info"]["map_name"] = (
+                    round.select_one("div.map > div > span")
+                    .getText()
+                    .replace("PICK", "")
+                    .strip()
+                )
+                stats["round4"]["round_info"]["map_duration"] = (
+                    round.select_one(".map-duration").getText().strip()
+                )
+
+                team_tables = round.select("table")
+                team1_table = team_tables[0]
+                team2_table = team_tables[1]
+
+                team1_players = team1_table.select("tbody tr")
+                team2_players = team2_table.select("tbody tr")
+
+                for players in team1_players:
+                    player_stats = players.select("td")
+                    for i, single_stat in enumerate(player_stats):
+                        match i:
+                            case 0:
+                                # class="mod-player"
+                                player_name = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stats["round4"]["team1"][player_name] = {}
+                                stats["round4"]["team1"][player_name]["country"] = (
+                                    "".join(
+                                        single_stat.select_one("i").get("class")
+                                    ).replace("mod", "")
+                                )
+                            case 1:
+                                # class="mod-agents"
+                                agents_list = []
+                                agents = single_stat.select("span.mod-agent")
+                                for agent in agents:
+                                    agents_list.append(
+                                        agent.select_one("img").get("title").strip()
+                                    )
+                                stats["round4"]["team1"][player_name][
+                                    "agents"
+                                ] = agents_list
+                            case 2:
+                                # class="mod-stat"
+                                stats["round4"]["team1"][player_name]["rating"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 3:
+                                # class="mod-stat"
+                                stats["round4"]["team1"][player_name]["ACS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 4:
+                                # class="mod-stat mod-vlr-kills"
+                                stats["round4"]["team1"][player_name]["K"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 5:
+                                # class="mod-stat mod-vlr-deaths"
+                                stats["round4"]["team1"][player_name]["D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 6:
+                                # class="mod-stat mod-vlr-assists"
+                                stats["round4"]["team1"][player_name]["A"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 7:
+                                # class="mod-stat mod-kd-diff"
+                                stats["round4"]["team1"][player_name]["Diff_K_D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 8:
+                                # class="mod-stat"
+                                stats["round4"]["team1"][player_name]["KAST"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 9:
+                                # class="mod-stat"
+                                stats["round4"]["team1"][player_name]["ADR"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 10:
+                                # class="mod-stat"
+                                stats["round4"]["team1"][player_name]["HS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 11:
+                                # class="mod-stats mod-fb"
+                                stats["round4"]["team1"][player_name]["FK"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 12:
+                                # class="mod-stats mod-fd"
+                                stats["round4"]["team1"][player_name]["FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 13:
+                                # class="mod-stats mod-fk-diff"
+                                stats["round4"]["team1"][player_name]["Diff_FK_FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+
+                for players in team2_players:
+                    player_stats = players.select("td")
+                    for i, single_stat in enumerate(player_stats):
+                        match i:
+                            case 0:
+                                # class="mod-player"
+                                player_name = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stats["round4"]["team2"][player_name] = {}
+                                stats["round4"]["team2"][player_name]["country"] = (
+                                    "".join(
+                                        single_stat.select_one("i").get("class")
+                                    ).replace("mod", "")
+                                )
+                            case 1:
+                                # class="mod-agents"
+                                agents_list = []
+                                agents = single_stat.select("span.mod-agent")
+                                for agent in agents:
+                                    agents_list.append(
+                                        agent.select_one("img").get("title").strip()
+                                    )
+                                stats["round4"]["team2"][player_name][
+                                    "agents"
+                                ] = agents_list
+                            case 2:
+                                # class="mod-stat"
+                                stats["round4"]["team2"][player_name]["rating"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 3:
+                                # class="mod-stat"
+                                stats["round4"]["team2"][player_name]["ACS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 4:
+                                # class="mod-stat mod-vlr-kills"
+                                stats["round4"]["team2"][player_name]["K"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 5:
+                                # class="mod-stat mod-vlr-deaths"
+                                stats["round4"]["team2"][player_name]["D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 6:
+                                # class="mod-stat mod-vlr-assists"
+                                stats["round4"]["team2"][player_name]["A"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 7:
+                                # class="mod-stat mod-kd-diff"
+                                stats["round4"]["team2"][player_name]["Diff_K_D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 8:
+                                # class="mod-stat"
+                                stats["round4"]["team2"][player_name]["KAST"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 9:
+                                # class="mod-stat"
+                                stats["round4"]["team2"][player_name]["ADR"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 10:
+                                # class="mod-stat"
+                                stats["round4"]["team2"][player_name]["HS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 11:
+                                # class="mod-stats mod-fb"
+                                stats["round4"]["team2"][player_name]["FK"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 12:
+                                # class="mod-stats mod-fd"
+                                stats["round4"]["team2"][player_name]["FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 13:
+                                # class="mod-stats mod-fk-diff"
+                                stats["round4"]["team2"][player_name]["Diff_FK_FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
 
             case 5:
                 """Round 5"""
-                continue
+                stats["round5"]["round_info"]["map_name"] = (
+                    round.select_one("div.map > div > span")
+                    .getText()
+                    .replace("PICK", "")
+                    .strip()
+                )
+                stats["round5"]["round_info"]["map_duration"] = (
+                    round.select_one(".map-duration").getText().strip()
+                )
+
+                team_tables = round.select("table")
+                team1_table = team_tables[0]
+                team2_table = team_tables[1]
+
+                team1_players = team1_table.select("tbody tr")
+                team2_players = team2_table.select("tbody tr")
+
+                for players in team1_players:
+                    player_stats = players.select("td")
+                    for i, single_stat in enumerate(player_stats):
+                        match i:
+                            case 0:
+                                # class="mod-player"
+                                player_name = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stats["round5"]["team1"][player_name] = {}
+                                stats["round5"]["team1"][player_name]["country"] = (
+                                    "".join(
+                                        single_stat.select_one("i").get("class")
+                                    ).replace("mod", "")
+                                )
+                            case 1:
+                                # class="mod-agents"
+                                agents_list = []
+                                agents = single_stat.select("span.mod-agent")
+                                for agent in agents:
+                                    agents_list.append(
+                                        agent.select_one("img").get("title").strip()
+                                    )
+                                stats["round5"]["team1"][player_name][
+                                    "agents"
+                                ] = agents_list
+                            case 2:
+                                # class="mod-stat"
+                                stats["round5"]["team1"][player_name]["rating"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 3:
+                                # class="mod-stat"
+                                stats["round5"]["team1"][player_name]["ACS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 4:
+                                # class="mod-stat mod-vlr-kills"
+                                stats["round5"]["team1"][player_name]["K"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 5:
+                                # class="mod-stat mod-vlr-deaths"
+                                stats["round5"]["team1"][player_name]["D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 6:
+                                # class="mod-stat mod-vlr-assists"
+                                stats["round5"]["team1"][player_name]["A"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 7:
+                                # class="mod-stat mod-kd-diff"
+                                stats["round5"]["team1"][player_name]["Diff_K_D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 8:
+                                # class="mod-stat"
+                                stats["round5"]["team1"][player_name]["KAST"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 9:
+                                # class="mod-stat"
+                                stats["round5"]["team1"][player_name]["ADR"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 10:
+                                # class="mod-stat"
+                                stats["round5"]["team1"][player_name]["HS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 11:
+                                # class="mod-stats mod-fb"
+                                stats["round5"]["team1"][player_name]["FK"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 12:
+                                # class="mod-stats mod-fd"
+                                stats["round5"]["team1"][player_name]["FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 13:
+                                # class="mod-stats mod-fk-diff"
+                                stats["round5"]["team1"][player_name]["Diff_FK_FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+
+                for players in team2_players:
+                    player_stats = players.select("td")
+                    for i, single_stat in enumerate(player_stats):
+                        match i:
+                            case 0:
+                                # class="mod-player"
+                                player_name = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stats["round5"]["team2"][player_name] = {}
+                                stats["round5"]["team2"][player_name]["country"] = (
+                                    "".join(
+                                        single_stat.select_one("i").get("class")
+                                    ).replace("mod", "")
+                                )
+                            case 1:
+                                # class="mod-agents"
+                                agents_list = []
+                                agents = single_stat.select("span.mod-agent")
+                                for agent in agents:
+                                    agents_list.append(
+                                        agent.select_one("img").get("title").strip()
+                                    )
+                                stats["round5"]["team2"][player_name][
+                                    "agents"
+                                ] = agents_list
+                            case 2:
+                                # class="mod-stat"
+                                stats["round5"]["team2"][player_name]["rating"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 3:
+                                # class="mod-stat"
+                                stats["round5"]["team2"][player_name]["ACS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 4:
+                                # class="mod-stat mod-vlr-kills"
+                                stats["round5"]["team2"][player_name]["K"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 5:
+                                # class="mod-stat mod-vlr-deaths"
+                                stats["round5"]["team2"][player_name]["D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 6:
+                                # class="mod-stat mod-vlr-assists"
+                                stats["round5"]["team2"][player_name]["A"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 7:
+                                # class="mod-stat mod-kd-diff"
+                                stats["round5"]["team2"][player_name]["Diff_K_D"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 8:
+                                # class="mod-stat"
+                                stats["round5"]["team2"][player_name]["KAST"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 9:
+                                # class="mod-stat"
+                                stats["round5"]["team2"][player_name]["ADR"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 10:
+                                # class="mod-stat"
+                                stats["round5"]["team2"][player_name]["HS"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 11:
+                                # class="mod-stats mod-fb"
+                                stats["round5"]["team2"][player_name]["FK"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 12:
+                                # class="mod-stats mod-fd"
+                                stats["round5"]["team2"][player_name]["FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
+                            case 13:
+                                # class="mod-stats mod-fk-diff"
+                                stats["round5"]["team2"][player_name]["Diff_FK_FD"] = (
+                                    single_stat.select_one("span.mod-both")
+                                    .getText()
+                                    .strip()
+                                )
 
     print(stats)
     return {"data": {"status": response.status_code, "segments": results}}
