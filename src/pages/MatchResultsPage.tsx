@@ -10,26 +10,25 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
   return (
     <vstack width={'100%'} height={'100%'} cornerRadius="medium">
       {/* <text>{context.dimensions!.width}</text> */}
-      <TopBar matchData={matchData} />
-      <MatchInfo matchData={matchData} />
+      <ResultsPageTopBar matchData={matchData} />
+      <ResultsMatchInfo matchData={matchData} />
       <OptionsBar
         matchData={matchData}
         selectedTabIndex={selectedTabIndex}
         setSelectedTabIndex={setSelectedTabIndex}
       />
-      <MatchStats matchData={matchData} selectedTabIndex={selectedTabIndex} />
+      <ResultsMatchStats matchData={matchData} selectedTabIndex={selectedTabIndex} />
     </vstack>
   );
 };
 
-export function TopBar({ matchData }: { matchData: MatchDataType }): JSX.Element {
+export function ResultsPageTopBar({ matchData }: { matchData: MatchDataType }): JSX.Element {
   return (
     <hstack
       height="58px"
       padding="small"
       backgroundColor={CLR_DUTCH_WHITE}
       alignment="start middle"
-      maxWidth={788}
     >
       <spacer width={'10px'} />
       <vstack alignment="start middle">
@@ -44,7 +43,7 @@ export function TopBar({ matchData }: { matchData: MatchDataType }): JSX.Element
   );
 }
 
-export function MatchInfo({ matchData }: { matchData: MatchDataType }): JSX.Element {
+export function ResultsMatchInfo({ matchData }: { matchData: MatchDataType }): JSX.Element {
   return (
     <zstack width="100%" backgroundColor={CLR_WINE}>
       <hstack width={'100%'} height={'100%'} padding="medium">
@@ -136,7 +135,7 @@ export function OptionsBar({
   );
 }
 
-export function MatchStats({
+export function ResultsMatchStats({
   matchData,
   selectedTabIndex,
 }: {
