@@ -3,7 +3,7 @@ import { PlaceholdersAndVanishInput } from '../components/wordInput';
 import { sendToDevvit } from '../utils';
 import { useDevvitListener } from '../hooks/useDevvitListener';
 
-export const PokemonPage = () => {
+export const ResultsPage = () => {
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
   const pokemon = useDevvitListener('GET_POKEMON_RESPONSE');
