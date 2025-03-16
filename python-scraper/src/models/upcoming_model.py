@@ -1,23 +1,49 @@
 from pydantic import BaseModel, HttpUrl
-from datetime import datetime
 
 
-class UpcomingMatchSegment(BaseModel):
+class PlayerInfo(BaseModel):
+    id: int
+    name: str
+    flag: str
+
+
+class SingleUpcomingMatchSegment(BaseModel):
     team1: str
     team2: str
-    flag1: str
-    flag2: str
-    time_until_match: str
+    logo1: str
+    logo2: str
+    team1_short: str
+    team2_short: str
+    players1: list[PlayerInfo]
+    players2: list[PlayerInfo]
     match_series: str
     match_event: str
-    unix_timestamp: datetime
+    event_logo: str
+    match_date: str
+    match_time: str
+    unix_timestamp: str
+    rounds: str
+
+
+class SingleUpcomingMatchData(BaseModel):
+    status: int
+    segments: list[SingleUpcomingMatchSegment]
+
+
+class SingleUpcomingMatchResponse(BaseModel):
+    data: SingleUpcomingMatchData
+
+
+class AllUpcomingMatchSegment(BaseModel):
+    team1: str
+    team2: str
     match_page: HttpUrl
 
 
-class UpcomingMatchData(BaseModel):
+class AllUpcomingMatchesData(BaseModel):
     status: int
-    segments: list[UpcomingMatchSegment]
+    segments: list[AllUpcomingMatchSegment]
 
 
-class UpcomingMatchResponse(BaseModel):
-    data: UpcomingMatchData
+class AllUpcomingMatchesResponse(BaseModel):
+    data: AllUpcomingMatchesData
