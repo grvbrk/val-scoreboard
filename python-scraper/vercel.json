@@ -8,7 +8,7 @@
   "routes": [
     {
       "src": "/{.*}",
-      "use": "src/main.py"
+      "dest": "src/main.py"
     }
   ]
 }
