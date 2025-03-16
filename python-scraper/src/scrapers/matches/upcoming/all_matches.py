@@ -62,7 +62,7 @@ def scrape_upcoming_matches():
             #     else "Unknown"
             # )
 
-            url_path = f"https://www.vlr.gg/{match.get("href")}"
+            url_path = "https://www.vlr.gg/" + match.get("href")
             # response = requests.get(url_path, headers=headers)
             # if response.status_code != 200:
             #     return {"data": {"status": response.status_code, "segments": results}}

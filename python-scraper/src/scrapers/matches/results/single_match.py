@@ -161,6 +161,14 @@ def scrape_single_match_result(url: str):
                     player_stats = players.select("td")
                     for i, single_stat in enumerate(player_stats):
                         match i:
+                            case 0:
+                                # class="mod-player"
+                                stat["name"] = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stat["flag"] = "".join(
+                                    single_stat.select_one("i").get("class")
+                                ).replace("mod", "")
                             case 1:
                                 # class="mod-agents"
                                 agents_list = []
@@ -393,6 +401,14 @@ def scrape_single_match_result(url: str):
                     player_stats = players.select("td")
                     for i, single_stat in enumerate(player_stats):
                         match i:
+                            case 0:
+                                # class="mod-player"
+                                stat["name"] = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stat["flag"] = "".join(
+                                    single_stat.select_one("i").get("class")
+                                ).replace("mod", "")
                             case 1:
                                 # class="mod-agents"
                                 agents_list = []
@@ -634,6 +650,14 @@ def scrape_single_match_result(url: str):
                     player_stats = players.select("td")
                     for i, single_stat in enumerate(player_stats):
                         match i:
+                            case 0:
+                                # class="mod-player"
+                                stat["name"] = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stat["flag"] = "".join(
+                                    single_stat.select_one("i").get("class")
+                                ).replace("mod", "")
                             case 1:
                                 # class="mod-agents"
                                 agents_list = []
@@ -874,6 +898,14 @@ def scrape_single_match_result(url: str):
                     player_stats = players.select("td")
                     for i, single_stat in enumerate(player_stats):
                         match i:
+                            case 0:
+                                # class="mod-player"
+                                stat["name"] = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stat["flag"] = "".join(
+                                    single_stat.select_one("i").get("class")
+                                ).replace("mod", "")
                             case 1:
                                 # class="mod-agents"
                                 agents_list = []
@@ -1114,6 +1146,14 @@ def scrape_single_match_result(url: str):
                     player_stats = players.select("td")
                     for i, single_stat in enumerate(player_stats):
                         match i:
+                            case 0:
+                                # class="mod-player"
+                                stat["name"] = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stat["flag"] = "".join(
+                                    single_stat.select_one("i").get("class")
+                                ).replace("mod", "")
                             case 1:
                                 # class="mod-agents"
                                 agents_list = []
@@ -1354,6 +1394,14 @@ def scrape_single_match_result(url: str):
                     player_stats = players.select("td")
                     for i, single_stat in enumerate(player_stats):
                         match i:
+                            case 0:
+                                # class="mod-player"
+                                stat["name"] = (
+                                    single_stat.select_one(".text-of").getText().strip()
+                                )
+                                stat["flag"] = "".join(
+                                    single_stat.select_one("i").get("class")
+                                ).replace("mod", "")
                             case 1:
                                 # class="mod-agents"
                                 agents_list = []

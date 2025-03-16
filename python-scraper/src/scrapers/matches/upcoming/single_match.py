@@ -84,15 +84,15 @@ def scrape_single_upcoming_match(url: str):
     players1 = []
     players2 = []
 
-    for player in team1_players:
+    for idx, player in enumerate(team1_players):
         name = player.select_one(".text-of").getText().strip()
         player_flag = "".join(player.select_one("i").get("class")).replace("mod", "")
-        players1.append({"name": name, "flag": player_flag})
+        players1.append({"id": idx + 1, "name": name, "flag": player_flag})
 
-    for player in team2_players:
+    for idx, player in enumerate(team2_players):
         name = player.select_one(".text-of").getText().strip()
         player_flag = "".join(player.select_one("i").get("class")).replace("mod", "")
-        players2.append({"name": name, "flag": player_flag})
+        players2.append({"id": idx + 1, "name": name, "flag": player_flag})
 
     results.append(
         {

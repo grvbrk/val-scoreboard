@@ -88,8 +88,8 @@ def scrape_single_live_match(url: str):
                         "round": "1",
                         "map_name": map_name,
                         "map_duration": map_duration,
-                        "team1_score": team1_round_score,
-                        "team2_score": team2_round_score,
+                        "team1_round_score": team1_round_score,
+                        "team2_round_score": team2_round_score,
                     }
                 )
 
@@ -119,8 +119,8 @@ def scrape_single_live_match(url: str):
                         "round": "2",
                         "map_name": map_name,
                         "map_duration": map_duration,
-                        "team1_score": team1_round_score,
-                        "team2_score": team2_round_score,
+                        "team1_round_score": team1_round_score,
+                        "team2_round_score": team2_round_score,
                     }
                 )
 
@@ -146,8 +146,8 @@ def scrape_single_live_match(url: str):
                         "round": "3",
                         "map_name": map_name,
                         "map_duration": map_duration,
-                        "team1_score": team1_round_score,
-                        "team2_score": team2_round_score,
+                        "team1_round_score": team1_round_score,
+                        "team2_round_score": team2_round_score,
                     }
                 )
 
@@ -173,8 +173,8 @@ def scrape_single_live_match(url: str):
                         "round": "4",
                         "map_name": map_name,
                         "map_duration": map_duration,
-                        "team1_score": team1_round_score,
-                        "team2_score": team2_round_score,
+                        "team1_round_score": team1_round_score,
+                        "team2_round_score": team2_round_score,
                     }
                 )
 
@@ -200,8 +200,8 @@ def scrape_single_live_match(url: str):
                         "round": "5",
                         "map_name": map_name,
                         "map_duration": map_duration,
-                        "team1_score": team1_round_score,
-                        "team2_score": team2_round_score,
+                        "team1_round_score": team1_round_score,
+                        "team2_round_score": team2_round_score,
                     }
                 )
 

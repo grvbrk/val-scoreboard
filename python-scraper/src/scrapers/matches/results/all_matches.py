@@ -21,7 +21,7 @@ def scrape_all_match_results():
         team1 = team_array[0].getText().strip()
         team2 = team_array[1].getText().strip()
 
-        match_page = "https://www.vlr.gg/" + match.get("href")
+        match_page = "https://www.vlr.gg" + match.get("href")
 
         scores = match.select("div.match-item-vs-team-score")
         score1 = scores[0].getText().strip()
