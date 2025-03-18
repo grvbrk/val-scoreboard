@@ -1,24 +1,24 @@
 import { RedisClient } from '@devvit/public-api';
-import { REDIS_MATCH_TYPE, REDIS_UPCOMING_MATCH_DATA } from '../utils/redis.js';
-import { MatchSegment, PageType } from '../core/types.js';
+import { REDIS_MATCH_TYPE, REDIS_UPCOMING_MATCH_INFO } from '../utils/redis.js';
+import { PageType } from '../core/types.js';
 
-export async function fetchExistingMatchPost(redis: RedisClient, key: string) {
-  return await redis.get(key);
-}
-
-export async function postUpcomingMatchDataToRedis(
+export async function postMatchInfoToRedis(
   redis: RedisClient,
   postId: string,
-  upcomingMatchData: MatchSegment
+  upcomingMatchInfo: {
+    team1: string;
+    team2: string;
+    match_page: string;
+  }
 ) {
   return await redis.set(
-    `${REDIS_UPCOMING_MATCH_DATA}${postId}`,
-    JSON.stringify(upcomingMatchData)
+    `${REDIS_UPCOMING_MATCH_INFO}${postId}`,
+    JSON.stringify(upcomingMatchInfo)
   );
 }
 
-export async function getUpcomingMatchDataFromRedis(redis: RedisClient, postId: string) {
-  return await redis.get(`${REDIS_UPCOMING_MATCH_DATA}${postId}`);
+export async function getMatchInfoFromRedis(redis: RedisClient, postId: string) {
+  return await redis.get(`${REDIS_UPCOMING_MATCH_INFO}${postId}`);
 }
 
 export async function getMatchTypeFromRedis(redis: RedisClient, postId: string) {
