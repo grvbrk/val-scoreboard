@@ -59,55 +59,65 @@ export const LiveMatchPage: Devvit.BlockComponent = (_, context) => {
 
   return (
     <vstack width={'100%'} height={'100%'} cornerRadius="medium" backgroundColor={CLR_WINE}>
-      <LivePageTopBar matchData={matchData.data.segments[0]} />
-      <LiveMatchInfo matchData={matchData.data.segments[0]} />
+      {context.dimensions?.width! > 400 ? (
+        <LivePageTopBar matchData={matchData.data.segments[0]} />
+      ) : (
+        <LivePageTopBarMobile matchData={matchData.data.segments[0]} />
+      )}
+
+      {context.dimensions?.width! > 400 ? (
+        <LiveMatchInfo matchData={matchData.data.segments[0]} />
+      ) : (
+        <LiveMatchInfoMobile matchData={matchData.data.segments[0]} />
+      )}
 
       <vstack width="100%" alignment="center middle">
-        <text
-          alignment="center middle"
-          color={CLR_DUTCH_WHITE}
-          style="metadata"
-          size="small"
-          maxWidth={'70%'}
-          wrap
-        >
+        <text alignment="center middle" color={CLR_DUTCH_WHITE} size={`xsmall`} width={80} wrap>
           GX.GC ban Fracture; SK.N ban Ascent; GX.GC pick Pearl; SK.N pick Lotus; GX.GC ban Haven;
           SK.N ban Split; Icebox remains
         </text>
       </vstack>
-      <spacer size="medium" />
-      <OptionsBar
-        matchData={matchData.data.segments[0]}
-        selectedTabIndex={selectedTabIndex}
-        setSelectedTabIndex={setSelectedTabIndex}
-      />
+      <spacer size="large" />
+
+      {context.dimensions?.width! > 400 ? (
+        <OptionsBar
+          matchData={matchData.data.segments[0]}
+          selectedTabIndex={selectedTabIndex}
+          setSelectedTabIndex={setSelectedTabIndex}
+        />
+      ) : (
+        <OptionsBarMobile
+          matchData={matchData.data.segments[0]}
+          selectedTabIndex={selectedTabIndex}
+          setSelectedTabIndex={setSelectedTabIndex}
+        />
+      )}
+
       <LiveMatchStats matchData={matchData.data.segments[0]} selectedTabIndex={selectedTabIndex} />
     </vstack>
   );
 };
 
 function LivePageTopBar({ matchData }: { matchData: LiveMatchSegment }): JSX.Element {
+  const { match_event, match_series } = matchData;
   return (
-    <hstack
-      height="58px"
-      padding="small"
-      backgroundColor={CLR_DUTCH_WHITE}
-      alignment="start middle"
-    >
-      <spacer width={'10px'} />
+    <hstack padding="small" backgroundColor={CLR_DUTCH_WHITE} alignment="start middle">
+      <spacer size="small" />
+      <image url={'event.png'} imageHeight={32} imageWidth={32} />
+      <spacer size="small" />
       <vstack grow alignment="start middle">
         <text color={CLR_WINE} style="heading" size="medium" wrap>
-          {matchData.match_series}
+          {match_series}
         </text>
         <text color={CLR_WINE} style="body" size="small">
-          {matchData.match_event}
+          {match_event}
         </text>
       </vstack>
 
       <spacer grow size="large" />
 
       <vstack grow alignment="end middle">
-        <text color={'#ff0000'} weight="bold" style="metadata" size="medium">
+        <text color={'#ff0000'} style="body" size="small">
           • LIVE
         </text>
         <hstack alignment="center middle">
@@ -118,35 +128,69 @@ function LivePageTopBar({ matchData }: { matchData: LiveMatchSegment }): JSX.Ele
         </hstack>
       </vstack>
 
-      <spacer width={'10px'} />
+      <spacer size="medium" />
+    </hstack>
+  );
+}
+
+function LivePageTopBarMobile({ matchData }: { matchData: LiveMatchSegment }): JSX.Element {
+  const { match_event, match_series } = matchData;
+  return (
+    <hstack padding="small" backgroundColor={CLR_DUTCH_WHITE} alignment="start middle">
+      <image url={'event.png'} imageHeight={32} imageWidth={32} />
+      <spacer size="small" />
+      <vstack grow alignment="start middle" width={50}>
+        <text color={CLR_WINE} weight="bold" size="medium" wrap>
+          {match_series}
+        </text>
+        <text color={CLR_WINE} size="xsmall">
+          {match_event}
+          mobile
+        </text>
+      </vstack>
+
+      <spacer grow size="medium" />
+
+      <vstack grow alignment="start middle" maxWidth={40}>
+        <text color={'#ff0000'} size="xsmall">
+          • LIVE
+        </text>
+        <hstack alignment="center middle">
+          <icon size="xsmall" color={CLR_WINE} name="link-outline" />
+          <text color={CLR_WINE} size="xsmall">
+            vlr.gg
+          </text>
+        </hstack>
+      </vstack>
     </hstack>
   );
 }
 
 function LiveMatchInfo({ matchData }: { matchData: LiveMatchSegment }): JSX.Element {
+  const { team1, team2, team1_score, team2_score } = matchData;
   return (
-    <zstack width="100%" backgroundColor={CLR_WINE}>
+    <zstack width="100%">
       <hstack width={'100%'} height={'100%'} padding="medium">
-        <hstack grow alignment="middle start" maxWidth={'50%'} minWidth={'40%'}>
-          <spacer size="medium" />
+        <spacer size="medium" />
+        <hstack grow alignment="middle start" width={40}>
           <text
-            maxWidth={'50%'}
-            minWidth={'40%'}
-            alignment="end middle"
+            width={50}
+            alignment="center middle"
             color={CLR_DUTCH_WHITE}
             size="large"
             weight="bold"
-            overflow="ellipsis"
             wrap
           >
-            {matchData.team1}
+            {team1}
           </text>
-          <spacer size="medium" />
-          <image url={'aura.png'} imageHeight={64} imageWidth={64} />
+          <hstack width={50} grow alignment="center middle">
+            <image url={'aura.png'} imageHeight={48} imageWidth={48} />
+          </hstack>
         </hstack>
-        <hstack grow alignment="middle center">
+
+        <hstack grow alignment="middle center" width={20}>
           <text color={CLR_DUTCH_WHITE} style="body" size="small">
-            {matchData.team1_score}
+            {team1_score}
           </text>
           <spacer size="small" />
           <text color={CLR_DUTCH_WHITE} style="body" size="small">
@@ -154,25 +198,67 @@ function LiveMatchInfo({ matchData }: { matchData: LiveMatchSegment }): JSX.Elem
           </text>
           <spacer size="small" />
           <text color={CLR_DUTCH_WHITE} style="body" size="small">
-            {matchData.team2_score}
+            {team2_score}
           </text>
         </hstack>
-        <hstack grow alignment="middle end" maxWidth={'50%'} minWidth={'40%'}>
-          <image url={'ge.png'} imageHeight={64} imageWidth={64} />
-          <spacer size="medium" />
+
+        <hstack grow alignment="middle end" width={40}>
+          <hstack width={50} grow alignment="center middle">
+            <image url={'ge.png'} imageHeight={48} imageWidth={48} />
+          </hstack>
           <text
-            alignment="start middle"
+            alignment="center middle"
             color={CLR_DUTCH_WHITE}
             size="large"
             weight="bold"
-            maxWidth={'50%'}
-            minWidth={'40%'}
             wrap
+            width={50}
           >
-            {matchData.team2}
+            {team2}
           </text>
-          <spacer size="medium" />
         </hstack>
+        <spacer size="medium" />
+      </hstack>
+    </zstack>
+  );
+}
+
+function LiveMatchInfoMobile({ matchData }: { matchData: LiveMatchSegment }): JSX.Element {
+  const { team1, team2, team1_score, team2_score } = matchData;
+  return (
+    <zstack width="100%">
+      <hstack width={'100%'} height={'100%'} padding="medium">
+        <vstack grow alignment="center middle" width={40}>
+          <hstack grow alignment="center middle">
+            <image url={'aura.png'} imageHeight={64} imageWidth={64} />
+          </hstack>
+          <text alignment="center middle" color={CLR_DUTCH_WHITE} size="small" weight="bold" wrap>
+            {team1}
+          </text>
+        </vstack>
+
+        <hstack grow alignment="middle center" width={20}>
+          <text color={CLR_DUTCH_WHITE} size="xsmall">
+            {team1_score}
+          </text>
+          <spacer size="small" />
+          <text color={CLR_DUTCH_WHITE} size="xsmall">
+            :
+          </text>
+          <spacer size="small" />
+          <text color={CLR_DUTCH_WHITE} size="xsmall">
+            {team2_score}
+          </text>
+        </hstack>
+
+        <vstack grow alignment="center middle" width={40}>
+          <hstack grow alignment="center middle">
+            <image url={'ge.png'} imageHeight={64} imageWidth={64} />
+          </hstack>
+          <text alignment="center middle" color={CLR_DUTCH_WHITE} size="small" weight="bold" wrap>
+            {team2}
+          </text>
+        </vstack>
       </hstack>
     </zstack>
   );
@@ -189,7 +275,48 @@ function OptionsBar({
 }): JSX.Element {
   return (
     <hstack width={'100%'} alignment="start middle">
-      <spacer grow size="medium" />
+      <spacer grow />
+      <hstack alignment="start middle">
+        {matchData.rounds.map((r, i) => {
+          const isActive = selectedTabIndex === i;
+          return (
+            <>
+              <zstack
+                cornerRadius="large"
+                backgroundColor={isActive ? CLR_DUTCH_WHITE : undefined}
+                padding="small"
+                onPress={() => {
+                  setSelectedTabIndex(i);
+                }}
+                minWidth={'60px'}
+                alignment="center middle"
+              >
+                <text selectable={false} size="small" color={isActive ? CLR_WINE : CLR_DUTCH_WHITE}>
+                  {r.map_name ?? 'All'}
+                </text>
+              </zstack>
+              <spacer grow width="10px" />
+            </>
+          );
+        })}
+      </hstack>
+      <spacer grow />
+    </hstack>
+  );
+}
+
+function OptionsBarMobile({
+  matchData,
+  selectedTabIndex,
+  setSelectedTabIndex,
+}: {
+  matchData: LiveMatchSegment;
+  selectedTabIndex: number;
+  setSelectedTabIndex: StateSetter<number>;
+}): JSX.Element {
+  return (
+    <hstack width={'100%'} alignment="start middle">
+      <spacer grow />
       <hstack alignment="start middle">
         {matchData.rounds.map((r, i) => {
           const isActive = selectedTabIndex === i;
@@ -205,16 +332,20 @@ function OptionsBar({
                 minWidth={'50px'}
                 alignment="center middle"
               >
-                <text selectable={false} size="small" color={isActive ? CLR_WINE : CLR_DUTCH_WHITE}>
+                <text
+                  selectable={false}
+                  size="xsmall"
+                  color={isActive ? CLR_WINE : CLR_DUTCH_WHITE}
+                >
                   {r.map_name ?? 'All'}
                 </text>
               </zstack>
-              <spacer grow width="10px" />
+              <spacer grow size="small" />
             </>
           );
         })}
       </hstack>
-      <spacer grow size="medium" />
+      <spacer grow />
     </hstack>
   );
 }
