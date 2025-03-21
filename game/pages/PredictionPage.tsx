@@ -1,160 +1,105 @@
-import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { cn } from '../utils';
-import { Switch } from '../components/ui/switch';
-import { Label } from '../components/ui/label';
 import SuperteamSelector from '../components/SuperTeamSelector';
+import MatchPredictor from '../components/MatchPredictor';
+import { SingleUpcomingMatchSegment } from '../../src/core/types';
+import { useState } from 'react';
+import { sendToDevvit } from '../utils';
 
-interface TeamProps {
+export type Player = {
+  id: string;
   name: string;
-  logo: string;
-}
+  team: 'A' | 'B';
+  teamName: string;
+  teamLogo: string;
+  teamShort: string;
+  flag: string;
+};
 
-interface MatchPredictorProps {
+export const PredictionPage = ({
+  upcomingMatchData,
+}: {
   postId: string;
-  teamA: TeamProps;
-  teamB: TeamProps;
-}
+  upcomingMatchData: SingleUpcomingMatchSegment;
+}) => {
+  const { players1, players2, team1, team1_short, team2, team2_short, logo1, logo2, event_logo } =
+    upcomingMatchData;
+  const [score1, setScore1] = useState<string>('0');
+  const [score2, setScore2] = useState<string>('0');
+  const [team1Wins, setTeam1Wins] = useState<boolean>(false);
+  const [availablePlayers, setAvailablePlayers] = useState<Player[]>([
+    ...players1.map((player) => ({
+      id: `1${player.id}`,
+      name: player.name,
+      team: 'A' as const,
+      teamLogo: logo1,
+      teamName: team1,
+      teamShort: team1_short,
+      flag: player.flag,
+    })),
+    ...players2.map((player) => ({
+      id: `2${player.id}`,
+      name: player.name,
+      team: 'B' as const,
+      teamLogo: logo2,
+      teamName: team2,
+      teamShort: team2_short,
+      flag: player.flag,
+    })),
+  ]);
+  const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
 
-export const PredictionPage = ({ postId, teamA, teamB }: MatchPredictorProps) => {
-  const [scoreA, setScoreA] = useState<string>('0');
-  const [scoreB, setScoreB] = useState<string>('0');
-  const [teamAWins, setTeamAWins] = useState<boolean>(false);
-
-  const handleScoreChange = (team: 'A' | 'B', value: string) => {
-    if (!/^\d*$/.test(value)) return;
-
-    if (team === 'A') {
-      setScoreA(value);
-      if (Number.parseInt(value) > Number.parseInt(scoreB)) {
-        setTeamAWins(true);
-      } else if (Number.parseInt(value) < Number.parseInt(scoreB)) {
-        setTeamAWins(false);
-      }
-    } else {
-      setScoreB(value);
-      if (Number.parseInt(value) > Number.parseInt(scoreA)) {
-        setTeamAWins(false);
-      } else if (Number.parseInt(value) < Number.parseInt(scoreA)) {
-        setTeamAWins(true);
-      }
-    }
-  };
+  function handleSubmitTeam() {
+    const userPred = {
+      winPred: team1Wins ? team1 : team2,
+      team1ScorePred: score1,
+      team2ScorePred: score2,
+      superTeam: selectedPlayers.map((p) => p.name),
+    };
+    sendToDevvit({
+      type: 'SEND_USER_PREDS',
+      payload: userPred,
+    });
+  }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-900 to-red-800 px-4 py-10 text-white">
+    <main className="min-h-screen px-4 py-10">
       <div className="container mx-auto">
-        <h1 className="mb-4 bg-gradient-to-r from-red-500 to-white bg-clip-text text-center text-5xl font-bold text-transparent">
-          VALORANT SUPERTEAM
-        </h1>
-        <div className="mx-auto mb-8 h-1 w-40 bg-gradient-to-r from-red-500 to-red-600"></div>
-        <h1 className="text-2xl font-bold">MATCH PREDICTION</h1>
-        <p className="mb-10 max-w-2xl text-neutral-400">
-          Predict the score of the upcoming match between Fnatic and Team Vitality!
-        </p>
-        <p className="mx-auto mb-10 max-w-2xl text-center text-neutral-400">
-          Create your ultimate superteam by selecting 5 players from the upcoming match Fnatic vs
-          Team Vitality. Click to select players and submit your team to compete!
-        </p>
-        <SuperteamSelector />
+        <div className="mb-8 flex flex-col items-center">
+          <img src={event_logo} alt="Event Logo" className="mb-4 h-16" />
+          <h1 className="mb-4 bg-gradient-to-r from-red-500 to-red-500 bg-clip-text text-center text-5xl font-bold text-transparent">
+            VALORANT SUPERTEAM
+          </h1>
+          <div className="mx-auto mb-4 h-1 w-40 bg-gradient-to-r from-red-500 to-red-600"></div>
+          <p className="mx-auto mb-2 max-w-2xl text-center text-neutral-400">
+            {upcomingMatchData.match_series}
+          </p>
+          <p className="mx-auto mb-6 max-w-2xl text-center font-semibold text-neutral-300">
+            {upcomingMatchData.match_event} • {upcomingMatchData.match_date} •{' '}
+            {upcomingMatchData.match_time} • {upcomingMatchData.rounds}
+          </p>
+
+          <p className="mx-auto max-w-2xl text-center text-neutral-400">
+            {`Create your ultimate superteam by selecting 5 players from the available pool. Click to select players and submit your team to compete!`}
+          </p>
+        </div>
+
+        <MatchPredictor
+          upcomingMatchData={upcomingMatchData}
+          score1={score1}
+          setScore1={setScore1}
+          score2={score2}
+          setScore2={setScore2}
+          team1Wins={team1Wins}
+          setTeam1Wins={setTeam1Wins}
+        />
+        <SuperteamSelector
+          upcomingMatchData={upcomingMatchData}
+          availablePlayers={availablePlayers}
+          setAvailablePlayers={setAvailablePlayers}
+          selectedPlayers={selectedPlayers}
+          setSelectedPlayers={setSelectedPlayers}
+          handleSubmitTeam={handleSubmitTeam}
+        />
       </div>
     </main>
-    // <div className="bg-pearl relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-lg">
-    //   <Card className={cn('mx-auto w-full max-w-md')}>
-    //     <CardHeader>
-    //       <CardTitle className="text-center">Match Prediction</CardTitle>
-    //       <CardDescription className="text-center">
-    //         Predict the score for the upcoming match
-    //       </CardDescription>
-    //     </CardHeader>
-    //     <CardContent>
-    //       <div className="mb-6 flex items-center justify-center gap-2">
-    //         <span className={teamAWins ? 'font-medium' : 'text-muted-foreground'}>
-    //           {teamA.name} wins
-    //         </span>
-    //         <Switch checked={!teamAWins} onCheckedChange={(checked) => setTeamAWins(!checked)} />
-    //         <span className={!teamAWins ? 'font-medium' : 'text-muted-foreground'}>
-    //           {teamB.name} wins
-    //         </span>
-    //       </div>
-
-    //       <div className="grid grid-cols-5 items-center gap-4">
-    //         {/* Team A */}
-    //         <div className="col-span-2 flex flex-col items-center gap-2">
-    //           <div
-    //             className={cn(
-    //               'rounded-lg p-2 transition-colors',
-    //               teamAWins ? 'bg-primary/10' : 'bg-background'
-    //             )}
-    //           >
-    //             <img
-    //               src={teamA.logo || '/placeholder.svg'}
-    //               alt={teamA.name}
-    //               width={64}
-    //               height={64}
-    //               className="mx-auto"
-    //             />
-    //           </div>
-    //           <Label className="text-center font-medium">{teamA.name}</Label>
-    //         </div>
-
-    //         <div className="col-span-1 flex items-center justify-center">
-    //           <span className="text-muted-foreground text-xl font-bold">VS</span>
-    //         </div>
-
-    //         <div className="col-span-2 flex flex-col items-center gap-2">
-    //           <div
-    //             className={cn(
-    //               'rounded-lg p-2 transition-colors',
-    //               !teamAWins ? 'bg-primary/10' : 'bg-background'
-    //             )}
-    //           >
-    //             <img
-    //               src={teamB.logo || '/placeholder.svg'}
-    //               alt={teamB.name}
-    //               width={64}
-    //               height={64}
-    //               className="mx-auto"
-    //             />
-    //           </div>
-    //           <Label className="text-center font-medium">{teamB.name}</Label>
-    //         </div>
-
-    //         <div className="col-span-2 mt-4">
-    //           <div className="flex justify-center">
-    //             <Input
-    //               type="text"
-    //               value={scoreA}
-    //               onChange={(e) => handleScoreChange('A', e.target.value)}
-    //               className="w-16 text-center text-lg font-bold"
-    //               maxLength={2}
-    //             />
-    //           </div>
-    //         </div>
-
-    //         <div className="col-span-1" />
-
-    //         <div className="col-span-2 mt-4">
-    //           <div className="flex justify-center">
-    //             <Input
-    //               type="text"
-    //               value={scoreB}
-    //               onChange={(e) => handleScoreChange('B', e.target.value)}
-    //               className="w-16 text-center text-lg font-bold"
-    //               maxLength={2}
-    //             />
-    //           </div>
-    //         </div>
-    //       </div>
-
-    //       <div className="text-muted-foreground mt-8 text-center text-sm">
-    //         {teamAWins
-    //           ? `You predict ${teamA.name} will win ${scoreA}-${scoreB}`
-    //           : `You predict ${teamB.name} will win ${scoreB}-${scoreA}`}
-    //       </div>
-    //     </CardContent>
-    //   </Card>
-    // </div>
   );
 };
