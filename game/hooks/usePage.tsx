@@ -5,7 +5,7 @@ const PageContext = createContext<Page | null>(null);
 const PageUpdaterContext = createContext<React.Dispatch<React.SetStateAction<Page>> | null>(null);
 
 export const PageContextProvider = ({ children }: { children: React.ReactNode }) => {
-  const [page, setPage] = useState<Page>('home');
+  const [page, setPage] = useState<Page>('prediction');
 
   return (
     <PageUpdaterContext.Provider value={setPage}>
