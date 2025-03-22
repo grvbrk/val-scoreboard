@@ -16,11 +16,40 @@ def scrape_single_match_result(url: str):
     soup = BeautifulSoup(response.text, "html.parser")
 
     match_info = soup.select_one("div.match-header")
+
+    match_series = (
+        match_info.select_one("a.match-header-event > div > div:nth-of-type(1)")
+        .getText()
+        .strip()
+    )
+
+    match_event = (
+        match_info.select_one("a.match-header-event div.match-header-event-series")
+        .getText()
+        .strip()
+        .replace("\n", "")
+        .replace("\t", "")
+    )
+
+    match_series_logo = match_info.select_one("a.match-header-event img").get("src")
+
     teams = match_info.select(
         ".match-header-link .match-header-link-name .wf-title-med"
     )
-    team1 = teams[0].getText().strip()
-    team2 = teams[1].getText().strip()
+    team1_name = teams[0].getText().strip()
+    team2_name = teams[1].getText().strip()
+
+    team_logos = match_info.select(".match-header-link img")
+    team1_logo = team_logos[0].get("src")
+    team2_logo = team_logos[1].get("src")
+
+    scores = match_info.select("div.match-header-vs-score .js-spoiler span")
+    team1_score = scores[0].getText().strip()
+    team2_score = scores[2].getText().strip()
+
+    team_picks = match_info.select_one(".match-header-note").getText().strip()
+
+    # _________________________________________ #
 
     rounds_arr = []
 
@@ -36,6 +65,12 @@ def scrape_single_match_result(url: str):
                     .strip()
                 )
                 map_duration = round.select_one(".map-duration").getText().strip()
+                teams = round.select("div.team")
+                team1 = teams[0]
+                team2 = teams[1]
+
+                team1_round_score = team1.select_one(".score").getText().strip()
+                team2_round_score = team2.select_one(".score").getText().strip()
 
                 team_tables = round.select("table")
                 team1_table = team_tables[0]
@@ -270,6 +305,8 @@ def scrape_single_match_result(url: str):
                         "round": "1",
                         "map_name": map_name,
                         "map_duration": map_duration,
+                        "team1_round_score": team1_round_score,
+                        "team2_round_score": team2_round_score,
                         "team1_stats": team1_player_stats,
                         "team2_stats": team2_player_stats,
                     }
@@ -511,6 +548,8 @@ def scrape_single_match_result(url: str):
                         "round": "all",
                         "map_name": None,
                         "map_duration": None,
+                        "team1_round_score": None,
+                        "team2_round_score": None,
                         "team1_stats": team1_player_stats,
                         "team2_stats": team2_player_stats,
                     },
@@ -525,6 +564,12 @@ def scrape_single_match_result(url: str):
                     .strip()
                 )
                 map_duration = round.select_one(".map-duration").getText().strip()
+                teams = round.select("div.team")
+                team1 = teams[0]
+                team2 = teams[1]
+
+                team1_round_score = team1.select_one(".score").getText().strip()
+                team2_round_score = team2.select_one(".score").getText().strip()
 
                 team_tables = round.select("table")
                 team1_table = team_tables[0]
@@ -759,6 +804,8 @@ def scrape_single_match_result(url: str):
                         "round": "2",
                         "map_name": map_name,
                         "map_duration": map_duration,
+                        "team1_round_score": team1_round_score,
+                        "team2_round_score": team2_round_score,
                         "team1_stats": team1_player_stats,
                         "team2_stats": team2_player_stats,
                     }
@@ -773,6 +820,12 @@ def scrape_single_match_result(url: str):
                     .strip()
                 )
                 map_duration = round.select_one(".map-duration").getText().strip()
+                teams = round.select("div.team")
+                team1 = teams[0]
+                team2 = teams[1]
+
+                team1_round_score = team1.select_one(".score").getText().strip()
+                team2_round_score = team2.select_one(".score").getText().strip()
 
                 team_tables = round.select("table")
                 team1_table = team_tables[0]
@@ -1007,6 +1060,8 @@ def scrape_single_match_result(url: str):
                         "round": "3",
                         "map_name": map_name,
                         "map_duration": map_duration,
+                        "team1_round_score": team1_round_score,
+                        "team2_round_score": team2_round_score,
                         "team1_stats": team1_player_stats,
                         "team2_stats": team2_player_stats,
                     }
@@ -1021,6 +1076,12 @@ def scrape_single_match_result(url: str):
                     .strip()
                 )
                 map_duration = round.select_one(".map-duration").getText().strip()
+                teams = round.select("div.team")
+                team1 = teams[0]
+                team2 = teams[1]
+
+                team1_round_score = team1.select_one(".score").getText().strip()
+                team2_round_score = team2.select_one(".score").getText().strip()
 
                 team_tables = round.select("table")
                 team1_table = team_tables[0]
@@ -1255,6 +1316,8 @@ def scrape_single_match_result(url: str):
                         "round": "4",
                         "map_name": map_name,
                         "map_duration": map_duration,
+                        "team1_round_score": team1_round_score,
+                        "team2_round_score": team2_round_score,
                         "team1_stats": team1_player_stats,
                         "team2_stats": team2_player_stats,
                     }
@@ -1269,6 +1332,12 @@ def scrape_single_match_result(url: str):
                     .strip()
                 )
                 map_duration = round.select_one(".map-duration").getText().strip()
+                teams = round.select("div.team")
+                team1 = teams[0]
+                team2 = teams[1]
+
+                team1_round_score = team1.select_one(".score").getText().strip()
+                team2_round_score = team2.select_one(".score").getText().strip()
 
                 team_tables = round.select("table")
                 team1_table = team_tables[0]
@@ -1503,11 +1572,26 @@ def scrape_single_match_result(url: str):
                         "round": "5",
                         "map_name": map_name,
                         "map_duration": map_duration,
+                        "team1_round_score": team1_round_score,
+                        "team2_round_score": team2_round_score,
                         "team1_stats": team1_player_stats,
                         "team2_stats": team2_player_stats,
                     }
                 )
 
-    game_stats = {"team1": team1, "team2": team2, "rounds": rounds_arr}
-    results.append(game_stats)
+    results.append(
+        {
+            "team1": team1_name,
+            "team2": team2_name,
+            "logo1": team1_logo,
+            "logo2": team2_logo,
+            "match_series": match_series,
+            "match_event": match_event,
+            "event_logo": match_series_logo,
+            "team1_score": team1_score,
+            "team2_score": team2_score,
+            "team_picks": team_picks,
+            "rounds": rounds_arr,
+        }
+    )
     return {"data": {"status": response.status_code, "segments": results}}

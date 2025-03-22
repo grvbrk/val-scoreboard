@@ -12,17 +12,38 @@ def scrape_single_live_match(url: str):
 
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        return {"data": {"status": response.status_code, "segments": results}}
+        return {
+            "data": {
+                "status": response.status_code,
+                "is_live": False,
+                "segments": results,
+            }
+        }
 
     soup = BeautifulSoup(response.text, "html.parser")
 
     match_info = soup.select_one("div.match-header")
+
+    is_live = False
+    is_live_el = match_info.select_one("span.match-header-vs-note.mod-live")
+    if is_live_el and is_live_el.getText().strip() == "live":
+        is_live = True
+
+    if not is_live:
+        return {
+            "data": {
+                "status": response.status_code,
+                "is_live": False,
+                "segments": results,
+            }
+        }
 
     match_series = (
         match_info.select_one("a.match-header-event > div > div:nth-of-type(1)")
         .getText()
         .strip()
     )
+
     match_event = (
         match_info.select_one("a.match-header-event div.match-header-event-series")
         .getText()
@@ -58,6 +79,8 @@ def scrape_single_live_match(url: str):
     scores = match_info.select("div.match-header-vs-score .js-spoiler span")
     team1_score = scores[0].getText().strip()
     team2_score = scores[2].getText().strip()
+
+    team_picks = match_info.select_one(".match-header-note").getText().strip()
 
     # _________________________________________ #
 
@@ -218,8 +241,15 @@ def scrape_single_live_match(url: str):
             "match_time": match_time,
             "team1_score": team1_score,
             "team2_score": team2_score,
+            "team_picks": team_picks,
             "rounds": rounds_arr,
         }
     )
 
-    return {"data": {"status": response.status_code, "segments": results}}
+    return {
+        "data": {
+            "status": response.status_code,
+            "is_live": is_live,
+            "segments": results,
+        }
+    }
