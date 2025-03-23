@@ -1,7 +1,7 @@
 import { Devvit, Post } from '@devvit/public-api';
-import { PageType } from '../core/types.js';
-import { postMatchInfoToRedis, postMatchPageTypeToRedis } from '../matches/fetchMatches.js';
-import { Preview } from 'src/components/Preview.js';
+import { AllLiveMatchSegment, PageType } from '../core/types.js';
+import { postMatchInfoToRedis, postMatchPageTypeToRedis } from '../redis/matches.js';
+import { LivePreview } from 'src/components/LivePreview.js';
 
 export const LiveMatchesShowForm = Devvit.createForm(
   ({ live_matches }) => {
@@ -12,12 +12,10 @@ export const LiveMatchesShowForm = Devvit.createForm(
           name: 'match',
           label: 'Select Live Match',
           required: true,
-          options: live_matches.data.segments.map(
-            (match: { team1: string; team2: string; match_page: string }) => ({
-              label: `${match.team1} VS ${match.team2}`,
-              value: JSON.stringify(match),
-            })
-          ),
+          options: live_matches.data.segments.map((match: AllLiveMatchSegment) => ({
+            label: `${match.team1} VS ${match.team2}`,
+            value: JSON.stringify(match),
+          })),
         },
       ],
       title: 'Create Live Valorant Match Post',
@@ -28,28 +26,17 @@ export const LiveMatchesShowForm = Devvit.createForm(
   },
 
   async ({ values }, context) => {
-    const liveMatchInfo = JSON.parse(values['match']) as {
-      team1: string;
-      team2: string;
-      match_page: string;
-    };
+    const liveMatchInfo = JSON.parse(values['match']) as AllLiveMatchSegment;
     await createMatchPost(context, liveMatchInfo);
   }
 );
 
-async function createMatchPost(
-  ctx: Devvit.Context,
-  liveMatchInfo: {
-    team1: string;
-    team2: string;
-    match_page: string;
-  }
-) {
+async function createMatchPost(ctx: Devvit.Context, liveMatchInfo: AllLiveMatchSegment) {
   const { reddit } = ctx;
   const currentSubreddit = await reddit.getCurrentSubreddit();
   try {
     const post: Post = await reddit.submitPost({
-      preview: <Preview />,
+      preview: <LivePreview upcomingMatchInfo={liveMatchInfo} />,
       title: `${liveMatchInfo.team1} vs. ${liveMatchInfo.team2}`,
       subredditName: currentSubreddit.name,
     });

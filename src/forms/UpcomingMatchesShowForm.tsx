@@ -1,10 +1,8 @@
 import { Devvit, Post } from '@devvit/public-api';
-import { MatchSegment, PageType } from '../core/types.js';
-import {
-  fetchExistingMatchPost,
-  postUpcomingMatchDataToRedis,
-  postMatchPageTypeToRedis,
-} from '../matches/fetchMatches.js';
+import { AllUpcomingMatchSegment, PageType } from '../core/types.js';
+import { postMatchInfoToRedis, postMatchPageTypeToRedis } from '../redis/matches.js';
+import { UpcomingPreview } from 'src/components/UpcomingPreview.js';
+import { getTimeRemaining } from 'src/utils/timeRemaining.js';
 
 export const UpcomingMatchesShowForm = Devvit.createForm(
   ({ upcoming_matches }) => {
@@ -15,8 +13,8 @@ export const UpcomingMatchesShowForm = Devvit.createForm(
           name: 'match',
           label: 'Select Upcoming Match',
           required: true,
-          options: upcoming_matches.data.segments.map((match: MatchSegment) => ({
-            label: `${match.team1} VS ${match.team2}`,
+          options: upcoming_matches.data.segments.map((match: AllUpcomingMatchSegment) => ({
+            label: `${match.team1} VS ${match.team2} | ${getTimeRemaining(match.unix_timestamp).timeLeft}`,
             value: JSON.stringify(match),
           })),
         },
@@ -29,28 +27,18 @@ export const UpcomingMatchesShowForm = Devvit.createForm(
   },
 
   async ({ values }, context) => {
-    const upcomingMatchData = JSON.parse(values['match']) as MatchSegment;
-    // Check for existing post for this match
-    const matchKey = `${upcomingMatchData.team1}.${upcomingMatchData.team2}`;
-    const match = await fetchExistingMatchPost(context.redis, matchKey);
-    if (match) {
-      context.ui.showToast({
-        text: 'Post for this game already created.',
-        appearance: 'neutral',
-      });
-    } else {
-      await createMatchPost(context, upcomingMatchData);
-    }
+    const upcomingMatchInfo = JSON.parse(values['match']) as AllUpcomingMatchSegment;
+    await createMatchPost(context, upcomingMatchInfo);
   }
 );
 
-async function createMatchPost(ctx: Devvit.Context, upcomingMatchData: MatchSegment) {
+async function createMatchPost(ctx: Devvit.Context, upcomingMatchInfo: AllUpcomingMatchSegment) {
   const { reddit } = ctx;
-  const currentSubreddit = await reddit.getCurrentSubreddit();
   try {
+    const currentSubreddit = await reddit.getCurrentSubreddit();
     const post: Post = await reddit.submitPost({
-      preview: <LoadingState />,
-      title: `${upcomingMatchData.team1} vs. ${upcomingMatchData.team2}`,
+      preview: <UpcomingPreview upcomingMatchInfo={upcomingMatchInfo} />,
+      title: `${upcomingMatchInfo.team1} vs. ${upcomingMatchInfo.team2}`,
       subredditName: currentSubreddit.name,
     });
 
@@ -59,7 +47,7 @@ async function createMatchPost(ctx: Devvit.Context, upcomingMatchData: MatchSegm
       appearance: 'success',
     });
 
-    await postUpcomingMatchDataToRedis(ctx.redis, post.id, upcomingMatchData);
+    await postMatchInfoToRedis(ctx.redis, post.id, upcomingMatchInfo);
     await postMatchPageTypeToRedis(ctx.redis, post.id, PageType.UPCOMING);
 
     ctx.ui.navigateTo(post.url);
@@ -70,25 +58,4 @@ async function createMatchPost(ctx: Devvit.Context, upcomingMatchData: MatchSegm
       appearance: 'neutral',
     });
   }
-}
-
-function LoadingState(): JSX.Element {
-  return (
-    <zstack width={'100%'} height={'100%'} alignment="center middle">
-      <vstack width={'100%'} height={'100%'} alignment="center middle">
-        <image
-          url="loading.gif"
-          description="Loading ..."
-          height={'140px'}
-          width={'140px'}
-          imageHeight={'240px'}
-          imageWidth={'240px'}
-        />
-        <spacer size="small" />
-        <text size="large" weight="bold">
-          Scoreboard loading...
-        </text>
-      </vstack>
-    </zstack>
-  );
 }
