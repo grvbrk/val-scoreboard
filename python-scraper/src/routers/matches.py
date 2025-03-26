@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Query
 from typing import Annotated
-from src.scrapers.matches.upcoming.all_matches import scrape_upcoming_matches
+from src.scrapers.matches.upcoming.all_matches import scrape_all_upcoming_matches
 from src.scrapers.matches.upcoming.single_match import scrape_single_upcoming_match
+from src.scrapers.matches.live.all_matches import scrape_all_live_matches
 from src.scrapers.matches.live.single_match import scrape_single_live_match
 from src.scrapers.matches.results.all_matches import scrape_all_match_results
 from src.scrapers.matches.results.single_match import scrape_single_match_result
-from src.models.live_model import LiveMatchResponse
+from src.models.live_model import AllLiveMatchesResponse, SingleLiveMatchResponse
 from src.models.upcoming_model import (
     AllUpcomingMatchesResponse,
     SingleUpcomingMatchResponse,
@@ -18,7 +19,7 @@ router = APIRouter()
 
 @router.get("/match/upcoming/all")
 async def get_matches() -> AllUpcomingMatchesResponse:
-    return scrape_upcoming_matches()
+    return scrape_all_upcoming_matches()
 
 
 @router.get("/match/upcoming/single")
@@ -35,7 +36,12 @@ async def get_matches(
     return scrape_single_upcoming_match(url)
 
 
-@router.get("/match/live")
+@router.get("/match/live/all")
+async def get_matches() -> AllLiveMatchesResponse:
+    return scrape_all_live_matches()
+
+
+@router.get("/match/live/single")
 async def get_matches(
     url: Annotated[
         str | None,
@@ -45,7 +51,7 @@ async def get_matches(
             regex=r"^https:\/\/www\.vlr\.gg\/\d+\/[\w-]+\/?$",
         ),
     ] = None,
-) -> LiveMatchResponse:
+) -> SingleLiveMatchResponse:
     return scrape_single_live_match(url)
 
 
