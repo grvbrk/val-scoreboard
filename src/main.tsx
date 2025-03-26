@@ -1,23 +1,22 @@
-import { Devvit, useAsync, useState, useWebView } from '@devvit/public-api';
-import { DEVVIT_SETTINGS_KEYS } from './utils/constants.js';
-import { UpcomingMatchPage } from './pages/UpcomingMatchPage.js';
-import { upcoming_matches, live_match, match_results } from './core/data.js';
+import { Devvit, useState } from '@devvit/public-api';
 import { UpcomingMatchesShowForm } from './forms/UpcomingMatchesShowForm.js';
 import { LiveMatchPage } from './pages/LiveMatchPage.js';
 import { MatchResultsPage } from './pages/MatchResultsPage.js';
-import { PageType } from './core/types.js';
 import {
-  REDIS_LIVE_MATCH_DATA,
-  REDIS_MATCH_RESULTS_DATA,
-  REDIS_MATCH_TYPE,
-  REDIS_UPCOMING_MATCH_DATA,
-} from './utils/redis.js';
-import { getMatchTypeFromRedis } from './matches/fetchMatches.js';
+  AllLiveMatchesData,
+  AllMatchResults,
+  AllUpcomingMatchesData,
+  PageType,
+} from './core/types.js';
+import { getMatchPageTypeFromRedis } from './redis/matches.js';
+import { UpcomingMatchPage } from './pages/UpcomingMatchPage.js';
+import { LiveMatchesShowForm } from './forms/LiveMatchesShowForm.js';
+import { MatchResultsShowForm } from './forms/MatchResultsShowForm.js';
 
 Devvit.addSettings([
   {
-    name: DEVVIT_SETTINGS_KEYS.SECRET_API_KEY,
-    label: 'API Key for secret things',
+    name: 'VALBOARD_URL',
+    label: 'VALBOARD_URL',
     type: 'string',
     isSecret: true,
     scope: 'app',
@@ -29,26 +28,45 @@ Devvit.configure({
   http: true,
   redis: true,
   realtime: true,
+  media: true,
 });
 
 Devvit.addMenuItem({
   label: '(VALORANT) Create Upcoming Match Post',
   location: 'subreddit',
   forUserType: `moderator`,
-  onPress: async (_event, { ui, redis }) => {
-    const url = 'https://upcoming-match-url.com';
-    return ui.showForm(UpcomingMatchesShowForm, { upcoming_matches: upcoming_matches });
+  onPress: async (_event, { ui, cache, userId, settings, postId }) => {
+    const VALBOARD_URL = await settings.get('VALBOARD_URL');
+    const url = `${VALBOARD_URL}/match/upcoming/all`;
 
-    // try {
-    //   const matchData = await fetch(url); // upcoming_matches
-    //   return ui.showForm(valScoreBoardShowForm, upcoming_matches);
-    // } catch (error) {
-    //   console.log(error);
-    //   ui.showToast({
-    //     text: 'Something went wrong...',
-    //     appearance: 'neutral',
-    //   });
-    // }
+    const result = await cache(
+      async () => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            ui.showToast({
+              text: 'Error getting response, please try again.',
+              appearance: 'neutral',
+            });
+            throw Error(`HTTP error ${response.status}: ${response.statusText}`);
+          }
+          return (await response.json()) as AllUpcomingMatchesData;
+        } catch (error) {
+          console.error(error);
+          ui.showToast({
+            text: 'Something went wrong...',
+            appearance: 'neutral',
+          });
+          return null;
+        }
+      },
+      {
+        key: `${postId}${userId}`,
+        ttl: 60000, // 1 min
+      }
+    );
+
+    return ui.showForm(UpcomingMatchesShowForm, { upcoming_matches: result });
   },
 });
 
@@ -56,18 +74,46 @@ Devvit.addMenuItem({
   label: '(VALORANT) Create Live Match Post',
   location: 'subreddit',
   forUserType: `moderator`,
-  onPress: async (_event, { ui }) => {
-    const url = 'https://live-match-url.com';
-    try {
-      const matchData = await fetch(url); // live_match
-      return ui.showForm(UpcomingMatchesShowForm, live_match);
-    } catch (error) {
-      console.log(error);
+  onPress: async (_event, { ui, cache, userId, settings, postId }) => {
+    const VALBOARD_URL = await settings.get('VALBOARD_URL');
+    const url = `${VALBOARD_URL}/match/live/all`;
+
+    const result = await cache(
+      async () => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            ui.showToast({
+              text: 'Error getting response, please try again.',
+              appearance: 'neutral',
+            });
+            throw Error(`HTTP error ${response.status}: ${response.statusText}`);
+          }
+          return (await response.json()) as AllLiveMatchesData;
+        } catch (error) {
+          console.error(error);
+          ui.showToast({
+            text: 'Something went wrong...',
+            appearance: 'neutral',
+          });
+          return null;
+        }
+      },
+      {
+        key: `${postId}${userId}`,
+        ttl: 60000, // 1 min
+      }
+    );
+
+    if (!result || result.data.status != 200 || result.data.segments.length === 0) {
       ui.showToast({
-        text: 'Something went wrong...',
+        text: "There's no live matches currently",
         appearance: 'neutral',
       });
+      return;
     }
+
+    return ui.showForm(LiveMatchesShowForm, { live_matches: result });
   },
 });
 
@@ -75,34 +121,51 @@ Devvit.addMenuItem({
   label: '(VALORANT) Create Match Results Post',
   location: 'subreddit',
   forUserType: `moderator`,
-  onPress: async (_event, { ui }) => {
-    const url = 'https://match-results-url.com';
-    try {
-      const matchData = await fetch(url); // match_results
-      return ui.showForm(UpcomingMatchesShowForm, match_results);
-    } catch (error) {
-      console.log(error);
-      ui.showToast({
-        text: 'Something went wrong...',
-        appearance: 'neutral',
-      });
-    }
+  onPress: async (_event, { ui, cache, userId, settings, postId }) => {
+    const VALBOARD_URL = await settings.get('VALBOARD_URL');
+    const url = `${VALBOARD_URL}/match/results/all`;
+
+    const result = await cache(
+      async () => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            ui.showToast({
+              text: 'Error getting response, please try again.',
+              appearance: 'neutral',
+            });
+            throw Error(`HTTP error ${response.status}: ${response.statusText}`);
+          }
+          return (await response.json()) as AllMatchResults;
+        } catch (error) {
+          console.error(error);
+          ui.showToast({
+            text: 'Something went wrong...',
+            appearance: 'neutral',
+          });
+          return null;
+        }
+      },
+      {
+        key: `${postId}${userId}`,
+        ttl: 60000, // 1 min
+      }
+    );
+
+    return ui.showForm(MatchResultsShowForm, { match_results: result });
   },
 });
 
-// Add a post type definition
 Devvit.addCustomPostType({
   name: 'Experience Post',
   height: 'tall',
   render: (context) => {
     const { redis, postId } = context;
-    const { data: page } = useAsync(async () => {
-      if (postId) {
-        const pageType = await getMatchTypeFromRedis(redis, postId);
-        if (!pageType) return null;
-        return pageType;
-      }
-      return null;
+    const [page, setPage] = useState<string | null>(async () => {
+      if (!postId) return null;
+      const pageType = await getMatchPageTypeFromRedis(redis, postId);
+      if (!pageType) return null;
+      return pageType;
     });
 
     return (
@@ -110,10 +173,10 @@ Devvit.addCustomPostType({
         {(() => {
           switch (page) {
             case PageType.UPCOMING:
-              return <UpcomingMatchPage />;
+              return <UpcomingMatchPage setPage={setPage} />;
             case PageType.LIVE:
-              return <LiveMatchPage />;
-            default:
+              return <LiveMatchPage setPage={setPage} />;
+            case PageType.RESULTS:
               return <MatchResultsPage />;
           }
         })()}
@@ -124,74 +187,27 @@ Devvit.addCustomPostType({
 
 export default Devvit;
 
-Devvit.addMenuItem({
-  label: '(DEV) Clear all redis keys',
-  location: 'subreddit',
-  forUserType: `moderator`,
-  onPress: async (_event, { ui, redis }) => {
-    try {
-      await redis.del(
-        REDIS_MATCH_TYPE,
-        REDIS_UPCOMING_MATCH_DATA,
-        REDIS_LIVE_MATCH_DATA,
-        REDIS_MATCH_RESULTS_DATA
-      );
-      ui.showToast({
-        text: 'Successfully deleted',
-        appearance: 'success',
-      });
-    } catch (error) {
-      ui.showToast({
-        text: 'Something went wrong while deleting...',
-        appearance: 'neutral',
-      });
-    }
-  },
-});
-
-{
-  /* <button
-          onPress={() => {
-            mount();
-          }}
-        >
-          Launch
-        </button> */
-}
-
-// const { mount } = useWebView<WebviewToBlockMessage, BlocksToWebviewMessage>({
-//   onMessage: async (event, { postMessage }) => {
-//     console.log('Received message', event);
-//     const data = event as unknown as WebviewToBlockMessage;
-
-//     switch (data.type) {
-//       case 'INIT':
-//         postMessage({
-//           type: 'INIT_RESPONSE',
-//           payload: {
-//             postId: context.postId!,
-//           },
-//         });
-//         break;
-//       case 'GET_POKEMON_REQUEST':
-//         context.ui.showToast({ text: `Received message: ${JSON.stringify(data)}` });
-//         const pokemon = await getPokemonByName(data.payload.name);
-
-//         postMessage({
-//           type: 'GET_POKEMON_RESPONSE',
-//           payload: {
-//             name: pokemon.name,
-//             number: pokemon.id,
-//             // Note that we don't allow outside images on Reddit if
-//             // wanted to get the sprite. Please reach out to support
-//             // if you need this for your app!
-//           },
-//         });
-//         break;
-
-//       default:
-//         console.error('Unknown message type', data satisfies never);
-//         break;
+// Devvit.addMenuItem({
+//   label: '(DEV) Clear all redis keys',
+//   location: 'subreddit',
+//   forUserType: `moderator`,
+//   onPress: async (_event, { ui, redis }) => {
+//     try {
+//       await redis.hDel(
+//         REDIS_MATCH_TYPE,
+//         REDIS_UPCOMING_MATCH_INFO,
+//         REDIS_LIVE_MATCH_INFO,
+//         REDIS_MATCH_RESULTS_INFO
+//       );
+//       ui.showToast({
+//         text: 'Successfully deleted',
+//         appearance: 'success',
+//       });
+//     } catch (error) {
+//       ui.showToast({
+//         text: 'Something went wrong while deleting...',
+//         appearance: 'neutral',
+//       });
 //     }
 //   },
 // });
