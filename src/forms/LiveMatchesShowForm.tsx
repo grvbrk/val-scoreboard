@@ -1,7 +1,7 @@
 import { Devvit, Post } from '@devvit/public-api';
 import { AllLiveMatchSegment, PageType } from '../core/types.js';
 import { postMatchInfoToRedis, postMatchPageTypeToRedis } from '../redis/matches.js';
-import { LivePreview } from 'src/components/LivePreview.js';
+import { LivePreview, LivePreviewMobile } from 'src/components/LivePreview.js';
 
 export const LiveMatchesShowForm = Devvit.createForm(
   ({ live_matches }) => {
@@ -32,11 +32,16 @@ export const LiveMatchesShowForm = Devvit.createForm(
 );
 
 async function createMatchPost(ctx: Devvit.Context, liveMatchInfo: AllLiveMatchSegment) {
-  const { reddit } = ctx;
+  const { reddit, dimensions } = ctx;
   const currentSubreddit = await reddit.getCurrentSubreddit();
   try {
     const post: Post = await reddit.submitPost({
-      preview: <LivePreview upcomingMatchInfo={liveMatchInfo} />,
+      preview:
+        dimensions?.width! > 400 ? (
+          <LivePreview upcomingMatchInfo={liveMatchInfo} />
+        ) : (
+          <LivePreviewMobile upcomingMatchInfo={liveMatchInfo} />
+        ),
       title: `${liveMatchInfo.team1} vs. ${liveMatchInfo.team2}`,
       subredditName: currentSubreddit.name,
     });

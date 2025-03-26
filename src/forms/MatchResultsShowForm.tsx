@@ -1,8 +1,7 @@
 import { Devvit, Post } from '@devvit/public-api';
 import { AllMatchResultSegment, PageType } from '../core/types.js';
 import { postMatchInfoToRedis, postMatchPageTypeToRedis } from '../redis/matches.js';
-import { Preview } from 'src/components/Preview.js';
-import { ResultsPreview } from 'src/components/ResultsPreview.js';
+import { ResultsPreview, ResultsPreviewMobile } from 'src/components/ResultsPreview.js';
 
 export const MatchResultsShowForm = Devvit.createForm(
   ({ match_results }) => {
@@ -33,11 +32,16 @@ export const MatchResultsShowForm = Devvit.createForm(
 );
 
 async function createMatchPost(ctx: Devvit.Context, matchResultInfo: AllMatchResultSegment) {
-  const { reddit } = ctx;
+  const { reddit, dimensions } = ctx;
   try {
     const currentSubreddit = await reddit.getCurrentSubreddit();
     const post: Post = await reddit.submitPost({
-      preview: <ResultsPreview upcomingMatchInfo={matchResultInfo} />,
+      preview:
+        dimensions?.width! > 400 ? (
+          <ResultsPreview upcomingMatchInfo={matchResultInfo} />
+        ) : (
+          <ResultsPreviewMobile upcomingMatchInfo={matchResultInfo} />
+        ),
       title: `${matchResultInfo.team1} vs. ${matchResultInfo.team2}`,
       subredditName: currentSubreddit.name,
     });

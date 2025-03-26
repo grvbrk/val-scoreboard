@@ -1,7 +1,7 @@
 import { Devvit, Post } from '@devvit/public-api';
 import { AllUpcomingMatchSegment, PageType } from '../core/types.js';
 import { postMatchInfoToRedis, postMatchPageTypeToRedis } from '../redis/matches.js';
-import { UpcomingPreview } from 'src/components/UpcomingPreview.js';
+import { UpcomingPreview, UpcomingPreviewMobile } from 'src/components/UpcomingPreview.js';
 import { getTimeRemaining } from 'src/utils/timeRemaining.js';
 
 export const UpcomingMatchesShowForm = Devvit.createForm(
@@ -33,11 +33,16 @@ export const UpcomingMatchesShowForm = Devvit.createForm(
 );
 
 async function createMatchPost(ctx: Devvit.Context, upcomingMatchInfo: AllUpcomingMatchSegment) {
-  const { reddit } = ctx;
+  const { reddit, dimensions } = ctx;
   try {
     const currentSubreddit = await reddit.getCurrentSubreddit();
     const post: Post = await reddit.submitPost({
-      preview: <UpcomingPreview upcomingMatchInfo={upcomingMatchInfo} />,
+      preview:
+        dimensions?.width! > 400 ? (
+          <UpcomingPreview upcomingMatchInfo={upcomingMatchInfo} />
+        ) : (
+          <UpcomingPreviewMobile upcomingMatchInfo={upcomingMatchInfo} />
+        ),
       title: `${upcomingMatchInfo.team1} vs. ${upcomingMatchInfo.team2}`,
       subredditName: currentSubreddit.name,
     });
