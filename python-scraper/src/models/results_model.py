@@ -23,6 +23,8 @@ class Round(BaseModel):
     round: str
     map_name: str | None
     map_duration: str | None
+    team1_round_score: str | None
+    team2_round_score: str | None
     team1_stats: list[PlayerStat]
     team2_stats: list[PlayerStat]
 
@@ -30,6 +32,16 @@ class Round(BaseModel):
 class SingleMatchResultSegment(BaseModel):
     team1: str
     team2: str
+    logo1: str
+    logo2: str
+    team1_short: str
+    team2_short: str
+    match_series: str
+    match_event: str
+    event_logo: str
+    team1_score: str
+    team2_score: str
+    team_picks: str
     rounds: list[Round]
 
 
@@ -47,7 +59,13 @@ class AllMatchResultSegment(BaseModel):
     team2: str
     score1: str
     score2: str
+    flag1: str
+    flag2: str
+    match_series: str
+    match_event: str
+    time_completed: str
     match_page: str
+    tournament_icon: str
 
 
 class AllMatchResultsData(BaseModel):

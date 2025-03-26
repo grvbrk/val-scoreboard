@@ -37,7 +37,12 @@ class SingleUpcomingMatchResponse(BaseModel):
 class AllUpcomingMatchSegment(BaseModel):
     team1: str
     team2: str
+    flag1: str
+    flag2: str
+    match_series: str
+    match_event: str
     match_page: HttpUrl
+    unix_timestamp: str
 
 
 class AllUpcomingMatchesData(BaseModel):
