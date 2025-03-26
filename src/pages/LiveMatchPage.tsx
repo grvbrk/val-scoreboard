@@ -1,115 +1,244 @@
-import { Devvit, StateSetter, useAsync, useState } from '@devvit/public-api';
+import { Devvit, StateSetter, useAsync, useInterval, useState } from '@devvit/public-api';
 import { ErrorState } from '../components/Error.js';
-import { liveMatchData, singleUpcomingMatchData } from 'src/core/data.js';
-import { LiveMatchSegment, LiveMatchType } from 'src/core/types.js';
-import { getMatchInfoFromRedis } from 'src/matches/fetchMatches.js';
-import { CLR_DUTCH_WHITE, CLR_WINE } from 'src/core/colors.js';
+import {
+  AllMatchResultSegment,
+  AllUpcomingMatchSegment,
+  PageType,
+  PlayerStat,
+  SingleLiveMatchData,
+  SingleLiveMatchSegment,
+} from 'src/core/types.js';
+import { getMatchInfoFromRedis, postMatchPageTypeToRedis } from 'src/redis/matches.js';
+import {
+  CLR_DARK_1,
+  CLR_DUTCH_WHITE,
+  CLR_HIGHLIGHT_GREEN,
+  CLR_HIGHLIGHT_RED,
+  CLR_WINE,
+} from 'src/core/colors.js';
+import { totalRoundTime } from 'src/utils/totalRoundTime.js';
+import { MAPS } from 'src/utils/maps.js';
+import { ResultsPreview, ResultsPreviewMobile } from 'src/components/ResultsPreview.js';
+import { LoadingState } from 'src/components/Loading.js';
 
-export const LiveMatchPage: Devvit.BlockComponent = (_, context) => {
-  const { redis, postId, cache, userId, ui, settings } = context;
+export const LiveMatchPage: Devvit.BlockComponent<{
+  setPage: StateSetter<string | null>;
+}> = (props, context) => {
+  const { postId, userId, settings, ui, cache, redis } = context;
 
   const [selectedTabIndex, setSelectedTabIndex] = useState<number>(0);
+  const [bgMaps, setBgMaps] = useState<{ name: string; show: boolean }[]>(
+    MAPS.map((map) => {
+      return { name: map, show: true };
+    })
+  );
+
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+
+  async function updatePostPreview() {
+    const post = await context.reddit.getPostById(postId!);
+    const upcomingMatchInfo = JSON.parse(
+      (await getMatchInfoFromRedis(redis, postId!)) as string
+    ) as AllUpcomingMatchSegment;
+
+    await post.setCustomPostPreview(() => {
+      if (context.dimensions?.width! > 400) {
+        return (
+          <ResultsPreview
+            upcomingMatchInfo={upcomingMatchInfo as unknown as AllMatchResultSegment}
+          />
+        );
+      }
+      return (
+        <ResultsPreviewMobile
+          upcomingMatchInfo={upcomingMatchInfo as unknown as AllMatchResultSegment}
+        />
+      );
+    });
+  }
+
   const {
     data: matchData,
     loading,
     error,
-  } = useAsync(async () => {
-    if (!postId || !userId) return null;
+  } = useAsync(
+    async () => {
+      if (!postId || !userId) return null;
 
-    return liveMatchData;
-    // const matchInfoStr = await getMatchInfoFromRedis(redis, postId);
-    // if (!matchInfoStr) return null;
-    // const { match_page } = JSON.parse(matchInfoStr) as {
-    //   team1: string;
-    //   team2: string;
-    //   match_page: string;
-    // };
+      const matchInfoStr = await getMatchInfoFromRedis(redis, postId);
+      if (!matchInfoStr) return null;
+      const { match_page } = JSON.parse(matchInfoStr) as {
+        team1: string;
+        team2: string;
+        match_page: string;
+      };
 
-    // const VALBOARD_URL = await settings.get('VALBOARD_URL');
-    // const url = `https://${VALBOARD_URL}/match/live?url=${match_page}`;
+      const VALBOARD_URL = await settings.get('VALBOARD_URL');
+      const url = `${VALBOARD_URL}/match/live/single?url=${match_page}`;
 
-    // return await cache(
-    //   async () => {
-    //     try {
-    //       const response = await fetch(url);
-    //       if (!response.ok) {
-    //         ui.showToast({
-    //           text: 'Something went wrong...',
-    //           appearance: 'neutral',
-    //         });
-    //         throw Error(`HTTP error ${response.status}: ${response.statusText}`);
-    //       }
-    //       return (await response.json()) as LiveMatchType;
-    //     } catch (error) {
-    //       ui.showToast({
-    //         text: 'Something went wrong...',
-    //         appearance: 'neutral',
-    //       });
-    //       return liveMatchData;
-    //     }
-    //   },
-    //   {
-    //     key: `${postId}${userId}`,
-    //     ttl: 60000, // 1 min
-    //   }
-    // );
-  });
+      return await cache(
+        async () => {
+          try {
+            const response = await fetch(url);
+            if (!response.ok) {
+              ui.showToast({
+                text: 'Error fetching data...',
+                appearance: 'neutral',
+              });
+              throw Error(`HTTP error ${response.status}: ${response.statusText}`);
+            }
+            const data = (await response.json()) as SingleLiveMatchData;
+            if (data.data.status != 200) {
+              throw Error(`Error! Status code: ${data.data.status}`);
+            }
+            return data;
+          } catch (error) {
+            console.error(error);
+            ui.showToast({
+              text: 'Something went wrong...',
+              appearance: 'neutral',
+            });
+            return null;
+          }
+        },
+        {
+          key: `live-${postId}`,
+          ttl: 60000, // 1 min
+        }
+      );
+    },
+    {
+      depends: [refreshTrigger],
+      finally(data, error) {
+        if (error) {
+          console.error('Failed to load data:', error);
+          return null;
+        }
+        if (data != null) {
+          if (!data.data.is_live) {
+            props.setPage(PageType.RESULTS);
+            postMatchPageTypeToRedis(redis, postId!, PageType.RESULTS);
+            updatePostPreview();
+            return null;
+          }
+          const newBgMaps = data.data.segments[0].rounds
+            .filter((r) => r.map_name)
+            .map((map) => {
+              return { name: map.map_name, show: true };
+            }) as { name: string; show: boolean }[];
+          setBgMaps(newBgMaps);
+        }
+      },
+    }
+  );
 
-  if (!matchData || loading || error) return <ErrorState />;
+  if (error) return <ErrorState />;
+  if (!matchData || loading) return <LoadingState />;
+
+  const interval = useInterval(() => {
+    setRefreshTrigger((prev) => prev + 1);
+  }, 60000); // 1 min
+
+  if (matchData.data.is_live) {
+    interval.start();
+  } else {
+    interval.stop();
+  }
 
   return (
-    <vstack width={'100%'} height={'100%'} cornerRadius="medium" backgroundColor={CLR_WINE}>
-      {context.dimensions?.width! > 400 ? (
-        <LivePageTopBar matchData={matchData.data.segments[0]} />
-      ) : (
-        <LivePageTopBarMobile matchData={matchData.data.segments[0]} />
-      )}
+    <zstack width={'100%'} height={'100%'}>
+      <hstack height={100} width={100}>
+        {bgMaps.map(
+          (map) =>
+            map.show && (
+              <image
+                url={`maps/${map.name === 'TBD' ? 'Haven' : map.name}.png`}
+                imageHeight={100}
+                imageWidth={100}
+                height={100}
+                width={100}
+                resizeMode="cover"
+                grow
+              />
+            )
+        )}
+      </hstack>
+      <vstack width={'100%'} height={'100%'}>
+        {context.dimensions?.width! > 500 ? (
+          <LivePageTopBar matchData={matchData.data.segments[0]} />
+        ) : (
+          <LivePageTopBarMobile matchData={matchData.data.segments[0]} />
+        )}
 
-      {context.dimensions?.width! > 400 ? (
-        <LiveMatchInfo matchData={matchData.data.segments[0]} />
-      ) : (
-        <LiveMatchInfoMobile matchData={matchData.data.segments[0]} />
-      )}
+        {context.dimensions?.width! > 500 ? (
+          <LiveMatchInfo
+            matchData={matchData.data.segments[0]}
+            selectedTabIndex={selectedTabIndex}
+          />
+        ) : (
+          <LiveMatchInfoMobile
+            matchData={matchData.data.segments[0]}
+            selectedTabIndex={selectedTabIndex}
+          />
+        )}
 
-      <vstack width="100%" alignment="center middle">
-        <text alignment="center middle" color={CLR_DUTCH_WHITE} size={`xsmall`} width={80} wrap>
-          GX.GC ban Fracture; SK.N ban Ascent; GX.GC pick Pearl; SK.N pick Lotus; GX.GC ban Haven;
-          SK.N ban Split; Icebox remains
-        </text>
+        <spacer size="small" />
+
+        <vstack width="100%" alignment="center middle">
+          <text alignment="center middle" color={'grey'} size={`xsmall`} width={80} wrap>
+            {matchData.data.segments[0].team_picks}
+          </text>
+        </vstack>
+
+        <spacer size="small" />
+
+        {context.dimensions?.width! > 500 ? (
+          <OptionsBar
+            matchData={matchData.data.segments[0]}
+            selectedTabIndex={selectedTabIndex}
+            setSelectedTabIndex={setSelectedTabIndex}
+            setBgMaps={setBgMaps}
+          />
+        ) : (
+          <OptionsBarMobile
+            matchData={matchData.data.segments[0]}
+            selectedTabIndex={selectedTabIndex}
+            setSelectedTabIndex={setSelectedTabIndex}
+            setBgMaps={setBgMaps}
+          />
+        )}
+
+        {context.dimensions?.width! > 500 ? (
+          <LiveMatchStats
+            matchData={matchData.data.segments[0]}
+            selectedTabIndex={selectedTabIndex}
+          />
+        ) : (
+          <LiveMatchStatsMobile
+            matchData={matchData.data.segments[0]}
+            selectedTabIndex={selectedTabIndex}
+          />
+        )}
       </vstack>
-      <spacer size="large" />
-
-      {context.dimensions?.width! > 400 ? (
-        <OptionsBar
-          matchData={matchData.data.segments[0]}
-          selectedTabIndex={selectedTabIndex}
-          setSelectedTabIndex={setSelectedTabIndex}
-        />
-      ) : (
-        <OptionsBarMobile
-          matchData={matchData.data.segments[0]}
-          selectedTabIndex={selectedTabIndex}
-          setSelectedTabIndex={setSelectedTabIndex}
-        />
-      )}
-
-      <LiveMatchStats matchData={matchData.data.segments[0]} selectedTabIndex={selectedTabIndex} />
-    </vstack>
+    </zstack>
   );
 };
 
-function LivePageTopBar({ matchData }: { matchData: LiveMatchSegment }): JSX.Element {
-  const { match_event, match_series } = matchData;
+function LivePageTopBar({ matchData }: { matchData: SingleLiveMatchSegment }): JSX.Element {
+  const { match_event, match_series, event_logo } = matchData;
   return (
     <hstack padding="small" backgroundColor={CLR_DUTCH_WHITE} alignment="start middle">
+      <image
+        url={`teams/${event_logo.replace('//owcdn.net/img/', '')}`}
+        imageHeight={32}
+        imageWidth={32}
+      />
       <spacer size="small" />
-      <image url={'event.png'} imageHeight={32} imageWidth={32} />
-      <spacer size="small" />
-      <vstack grow alignment="start middle">
-        <text color={CLR_WINE} style="heading" size="medium" wrap>
+      <vstack grow alignment="start middle" width={60}>
+        <text color={CLR_WINE} weight="bold" size="medium" wrap>
           {match_series}
         </text>
-        <text color={CLR_WINE} style="body" size="small">
+        <text color={CLR_WINE} size="small">
           {match_event}
         </text>
       </vstack>
@@ -117,13 +246,9 @@ function LivePageTopBar({ matchData }: { matchData: LiveMatchSegment }): JSX.Ele
       <spacer grow size="large" />
 
       <vstack grow alignment="end middle">
-        <text color={'#ff0000'} style="body" size="small">
-          • LIVE
-        </text>
         <hstack alignment="center middle">
-          <icon size="xsmall" color={CLR_WINE} name="link-outline" />
-          <text color={CLR_WINE} style="body" size="small">
-            vlr.gg
+          <text color={CLR_HIGHLIGHT_RED} size="small">
+            LIVE
           </text>
         </hstack>
       </vstack>
@@ -133,32 +258,31 @@ function LivePageTopBar({ matchData }: { matchData: LiveMatchSegment }): JSX.Ele
   );
 }
 
-function LivePageTopBarMobile({ matchData }: { matchData: LiveMatchSegment }): JSX.Element {
-  const { match_event, match_series } = matchData;
+function LivePageTopBarMobile({ matchData }: { matchData: SingleLiveMatchSegment }): JSX.Element {
+  const { match_event, match_series, event_logo } = matchData;
   return (
     <hstack padding="small" backgroundColor={CLR_DUTCH_WHITE} alignment="start middle">
-      <image url={'event.png'} imageHeight={32} imageWidth={32} />
+      <image
+        url={`teams/${event_logo.replace('//owcdn.net/img/', '')}`}
+        imageHeight={32}
+        imageWidth={32}
+      />
       <spacer size="small" />
-      <vstack grow alignment="start middle" width={50}>
-        <text color={CLR_WINE} weight="bold" size="medium" wrap>
+      <vstack grow alignment="start middle" width={60}>
+        <text color={CLR_WINE} weight="bold" size="small" wrap>
           {match_series}
         </text>
         <text color={CLR_WINE} size="xsmall">
           {match_event}
-          mobile
         </text>
       </vstack>
 
       <spacer grow size="medium" />
 
       <vstack grow alignment="start middle" maxWidth={40}>
-        <text color={'#ff0000'} size="xsmall">
-          • LIVE
-        </text>
         <hstack alignment="center middle">
-          <icon size="xsmall" color={CLR_WINE} name="link-outline" />
-          <text color={CLR_WINE} size="xsmall">
-            vlr.gg
+          <text color={CLR_HIGHLIGHT_RED} size="xsmall">
+            LIVE
           </text>
         </hstack>
       </vstack>
@@ -166,101 +290,237 @@ function LivePageTopBarMobile({ matchData }: { matchData: LiveMatchSegment }): J
   );
 }
 
-function LiveMatchInfo({ matchData }: { matchData: LiveMatchSegment }): JSX.Element {
-  const { team1, team2, team1_score, team2_score } = matchData;
+function LiveMatchInfo({
+  matchData,
+  selectedTabIndex,
+}: {
+  matchData: SingleLiveMatchSegment;
+  selectedTabIndex: number;
+}): JSX.Element {
+  const { team1, team2, team1_score, team2_score, rounds, logo1, logo2 } = matchData;
+  const roundInfo = rounds[selectedTabIndex];
+  const totalTime = totalRoundTime(rounds.map((r) => r.map_duration ?? '00:00'));
+  const totalTeam1Score = rounds.reduce((sum, r) => sum + parseInt(r.team1_round_score ?? '0'), 0);
+  const totalTeam2Score = rounds.reduce((sum, r) => sum + parseInt(r.team2_round_score ?? '0'), 0);
+
   return (
     <zstack width="100%">
-      <hstack width={'100%'} height={'100%'} padding="medium">
-        <spacer size="medium" />
-        <hstack grow alignment="middle start" width={40}>
-          <text
-            width={50}
-            alignment="center middle"
-            color={CLR_DUTCH_WHITE}
-            size="large"
-            weight="bold"
-            wrap
-          >
-            {team1}
-          </text>
-          <hstack width={50} grow alignment="center middle">
-            <image url={'aura.png'} imageHeight={48} imageWidth={48} />
-          </hstack>
-        </hstack>
+      <vstack width="100%">
+        <spacer size="small" />
 
-        <hstack grow alignment="middle center" width={20}>
-          <text color={CLR_DUTCH_WHITE} style="body" size="small">
-            {team1_score}
-          </text>
-          <spacer size="small" />
-          <text color={CLR_DUTCH_WHITE} style="body" size="small">
-            :
-          </text>
-          <spacer size="small" />
-          <text color={CLR_DUTCH_WHITE} style="body" size="small">
-            {team2_score}
-          </text>
-        </hstack>
+        <hstack width={'100%'} height={'100%'}>
+          <spacer grow />
 
-        <hstack grow alignment="middle end" width={40}>
-          <hstack width={50} grow alignment="center middle">
-            <image url={'ge.png'} imageHeight={48} imageWidth={48} />
+          <vstack width={30} grow alignment="center middle">
+            <hstack grow alignment="center middle">
+              <image
+                url={`teams/${logo1.replace('//owcdn.net/img/', '')}`}
+                imageHeight={64}
+                imageWidth={64}
+              />
+            </hstack>
+            <spacer size="small" />
+            <text alignment="center middle" color={CLR_DUTCH_WHITE} size="small" weight="bold" wrap>
+              {team1}
+            </text>
+          </vstack>
+
+          <hstack width={10} grow alignment="center middle">
+            <text
+              color={
+                selectedTabIndex === 0
+                  ? totalTeam1Score > totalTeam2Score
+                    ? 'green'
+                    : CLR_DUTCH_WHITE
+                  : parseInt(roundInfo.team1_round_score!) > parseInt(roundInfo.team2_round_score!)
+                    ? 'green'
+                    : CLR_DUTCH_WHITE
+              }
+            >
+              {roundInfo.team1_round_score ?? totalTeam1Score}
+            </text>
           </hstack>
-          <text
-            alignment="center middle"
-            color={CLR_DUTCH_WHITE}
-            size="large"
-            weight="bold"
-            wrap
-            width={50}
-          >
-            {team2}
-          </text>
+
+          <vstack grow alignment="middle center" width={20}>
+            <hstack alignment="bottom center">
+              <text color={'grey'} size="xsmall">
+                {selectedTabIndex === 0 ? totalTime : roundInfo.map_duration!}
+              </text>
+            </hstack>
+
+            <hstack>
+              <text
+                weight="bold"
+                color={parseInt(team1_score) > parseInt(team2_score) ? 'green' : CLR_DUTCH_WHITE}
+                size="xlarge"
+              >
+                {team1_score}
+              </text>
+              <spacer size="small" />
+              <text weight="bold" color={CLR_DUTCH_WHITE} size="xlarge">
+                :
+              </text>
+              <spacer size="small" />
+              <text
+                weight="bold"
+                color={parseInt(team2_score) > parseInt(team1_score) ? 'green' : CLR_DUTCH_WHITE}
+                size="xlarge"
+              >
+                {team2_score}
+              </text>
+            </hstack>
+
+            <hstack grow alignment="top center" maxHeight={23} />
+          </vstack>
+
+          <hstack width={10} grow alignment="center middle">
+            <text
+              color={
+                selectedTabIndex === 0
+                  ? totalTeam2Score > totalTeam1Score
+                    ? 'green'
+                    : CLR_DUTCH_WHITE
+                  : parseInt(roundInfo.team2_round_score!) > parseInt(roundInfo.team1_round_score!)
+                    ? 'green'
+                    : CLR_DUTCH_WHITE
+              }
+            >
+              {roundInfo.team2_round_score ?? totalTeam2Score}
+            </text>
+          </hstack>
+
+          <vstack width={30} grow alignment="center middle">
+            <hstack grow alignment="center middle">
+              <image
+                url={`teams/${logo2.replace('//owcdn.net/img/', '')}`}
+                imageHeight={64}
+                imageWidth={64}
+              />
+            </hstack>
+            <text alignment="center middle" color={CLR_DUTCH_WHITE} size="small" weight="bold" wrap>
+              {team2}
+            </text>
+          </vstack>
+
+          <spacer grow />
         </hstack>
-        <spacer size="medium" />
-      </hstack>
+      </vstack>
     </zstack>
   );
 }
 
-function LiveMatchInfoMobile({ matchData }: { matchData: LiveMatchSegment }): JSX.Element {
-  const { team1, team2, team1_score, team2_score } = matchData;
+function LiveMatchInfoMobile({
+  matchData,
+  selectedTabIndex,
+}: {
+  matchData: SingleLiveMatchSegment;
+  selectedTabIndex: number;
+}): JSX.Element {
+  const { team1, team2, team1_score, team2_score, rounds, logo1, logo2 } = matchData;
+  const roundInfo = rounds[selectedTabIndex];
+  const totalTime = totalRoundTime(rounds.map((r) => r.map_duration ?? '00:00'));
+  const totalTeam1Score = rounds.reduce((sum, r) => sum + parseInt(r.team1_round_score ?? '0'), 0);
+  const totalTeam2Score = rounds.reduce((sum, r) => sum + parseInt(r.team2_round_score ?? '0'), 0);
+
   return (
-    <zstack width="100%">
-      <hstack width={'100%'} height={'100%'} padding="medium">
-        <vstack grow alignment="center middle" width={40}>
+    <vstack width="100%">
+      <spacer size="small" />
+      <hstack width={'100%'} height={'100%'}>
+        <spacer grow />
+
+        <vstack width={30} grow alignment="center middle">
           <hstack grow alignment="center middle">
-            <image url={'aura.png'} imageHeight={64} imageWidth={64} />
+            <image
+              url={`teams/${logo1.replace('//owcdn.net/img/', '')}`}
+              imageHeight={64}
+              imageWidth={64}
+            />
           </hstack>
           <text alignment="center middle" color={CLR_DUTCH_WHITE} size="small" weight="bold" wrap>
             {team1}
           </text>
         </vstack>
 
-        <hstack grow alignment="middle center" width={20}>
-          <text color={CLR_DUTCH_WHITE} size="xsmall">
-            {team1_score}
-          </text>
-          <spacer size="small" />
-          <text color={CLR_DUTCH_WHITE} size="xsmall">
-            :
-          </text>
-          <spacer size="small" />
-          <text color={CLR_DUTCH_WHITE} size="xsmall">
-            {team2_score}
+        <hstack width={10} grow alignment="center middle">
+          <text
+            color={
+              selectedTabIndex === 0
+                ? totalTeam1Score > totalTeam2Score
+                  ? 'green'
+                  : CLR_DUTCH_WHITE
+                : parseInt(roundInfo.team1_round_score!) > parseInt(roundInfo.team2_round_score!)
+                  ? 'green'
+                  : CLR_DUTCH_WHITE
+            }
+          >
+            {roundInfo.team1_round_score ?? totalTeam1Score}
           </text>
         </hstack>
 
-        <vstack grow alignment="center middle" width={40}>
+        <vstack grow alignment="middle center" width={20}>
+          <hstack alignment="bottom center">
+            <text color={'grey'} size="xsmall">
+              {selectedTabIndex === 0 ? totalTime : roundInfo.map_duration!}
+            </text>
+          </hstack>
+
+          <hstack>
+            <text
+              weight="bold"
+              color={parseInt(team1_score) > parseInt(team2_score) ? 'green' : CLR_DUTCH_WHITE}
+              size="xlarge"
+            >
+              {team1_score}
+            </text>
+            <spacer size="small" />
+            <text weight="bold" color={CLR_DUTCH_WHITE} size="xlarge">
+              :
+            </text>
+            <spacer size="small" />
+            <text
+              weight="bold"
+              color={parseInt(team2_score) > parseInt(team1_score) ? 'green' : CLR_DUTCH_WHITE}
+              size="xlarge"
+            >
+              {team2_score}
+            </text>
+          </hstack>
+
+          <hstack grow alignment="top center" maxHeight={23} />
+        </vstack>
+
+        <hstack width={10} grow alignment="center middle">
+          <text
+            color={
+              selectedTabIndex === 0
+                ? totalTeam2Score > totalTeam1Score
+                  ? 'green'
+                  : CLR_DUTCH_WHITE
+                : parseInt(roundInfo.team2_round_score!) > parseInt(roundInfo.team1_round_score!)
+                  ? 'green'
+                  : CLR_DUTCH_WHITE
+            }
+          >
+            {roundInfo.team2_round_score ?? totalTeam2Score}
+          </text>
+        </hstack>
+
+        <vstack width={30} grow alignment="center middle">
           <hstack grow alignment="center middle">
-            <image url={'ge.png'} imageHeight={64} imageWidth={64} />
+            <image
+              url={`teams/${logo2.replace('//owcdn.net/img/', '')}`}
+              imageHeight={64}
+              imageWidth={64}
+            />
           </hstack>
           <text alignment="center middle" color={CLR_DUTCH_WHITE} size="small" weight="bold" wrap>
             {team2}
           </text>
         </vstack>
+
+        <spacer grow />
       </hstack>
-    </zstack>
+    </vstack>
   );
 }
 
@@ -268,13 +528,20 @@ function OptionsBar({
   matchData,
   selectedTabIndex,
   setSelectedTabIndex,
+  setBgMaps,
 }: {
-  matchData: LiveMatchSegment;
+  matchData: SingleLiveMatchSegment;
   selectedTabIndex: number;
   setSelectedTabIndex: StateSetter<number>;
+  setBgMaps: StateSetter<
+    {
+      name: string;
+      show: boolean;
+    }[]
+  >;
 }): JSX.Element {
   return (
-    <hstack width={'100%'} alignment="start middle">
+    <hstack width={'100%'} alignment="center middle">
       <spacer grow />
       <hstack alignment="start middle">
         {matchData.rounds.map((r, i) => {
@@ -286,6 +553,15 @@ function OptionsBar({
                 backgroundColor={isActive ? CLR_DUTCH_WHITE : undefined}
                 padding="small"
                 onPress={() => {
+                  setBgMaps((prev) =>
+                    prev.map((map) =>
+                      r.map_name === null
+                        ? { ...map, show: true }
+                        : map.name === r.map_name
+                          ? { ...map, show: true }
+                          : { ...map, show: false }
+                    )
+                  );
                   setSelectedTabIndex(i);
                 }}
                 minWidth={'60px'}
@@ -295,7 +571,6 @@ function OptionsBar({
                   {r.map_name ?? 'All'}
                 </text>
               </zstack>
-              <spacer grow width="10px" />
             </>
           );
         })}
@@ -309,13 +584,20 @@ function OptionsBarMobile({
   matchData,
   selectedTabIndex,
   setSelectedTabIndex,
+  setBgMaps,
 }: {
-  matchData: LiveMatchSegment;
+  matchData: SingleLiveMatchSegment;
   selectedTabIndex: number;
   setSelectedTabIndex: StateSetter<number>;
+  setBgMaps: StateSetter<
+    {
+      name: string;
+      show: boolean;
+    }[]
+  >;
 }): JSX.Element {
   return (
-    <hstack width={'100%'} alignment="start middle">
+    <hstack width={'100%'} alignment="center middle">
       <spacer grow />
       <hstack alignment="start middle">
         {matchData.rounds.map((r, i) => {
@@ -327,6 +609,15 @@ function OptionsBarMobile({
                 backgroundColor={isActive ? CLR_DUTCH_WHITE : undefined}
                 padding="small"
                 onPress={() => {
+                  setBgMaps((prev) =>
+                    prev.map((map) =>
+                      r.map_name === null
+                        ? { ...map, show: true }
+                        : map.name === r.map_name
+                          ? { ...map, show: true }
+                          : { ...map, show: false }
+                    )
+                  );
                   setSelectedTabIndex(i);
                 }}
                 minWidth={'50px'}
@@ -340,7 +631,6 @@ function OptionsBarMobile({
                   {r.map_name ?? 'All'}
                 </text>
               </zstack>
-              <spacer grow size="small" />
             </>
           );
         })}
@@ -350,36 +640,545 @@ function OptionsBarMobile({
   );
 }
 
+function StatsHeading({
+  roundsLength,
+  playerStat,
+}: {
+  roundsLength: number;
+  playerStat: PlayerStat;
+}): JSX.Element {
+  return (
+    <hstack grow width={'100%'} alignment="end middle">
+      <spacer size="small" />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={30} />
+
+      <spacer size="small" />
+      {playerStat.agents.length > 0 && (
+        <hstack alignment="start middle" width={roundsLength * 9} grow />
+      )}
+      <spacer size="small" />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={16}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          ACS
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={33}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          K / D / A
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={16}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          +/-
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={17}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          HS%
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={17}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          ADR
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={17}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          KAST
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={17}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          FK
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={17}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          FD
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={16}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          +/-
+        </text>
+      </hstack>
+
+      <spacer size="small" />
+    </hstack>
+  );
+}
+
+function StatsHeadingMobile({
+  roundsLength,
+  playerStat,
+}: {
+  roundsLength: number;
+  playerStat: PlayerStat;
+}): JSX.Element {
+  return (
+    <hstack grow width={'100%'} alignment="end middle">
+      <spacer size="small" />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={30} />
+
+      <spacer size="small" />
+      {playerStat.agents.length > 0 && (
+        <hstack alignment="start middle" width={roundsLength * 9} grow />
+      )}
+      <spacer size="small" />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={16}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          ACS
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={33}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          K / D / A
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={16}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          +/-
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={17}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          HS%
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack grow padding="xsmall" alignment="center middle" width={17}>
+        <text color={CLR_DUTCH_WHITE} size="xsmall">
+          ADR
+        </text>
+      </hstack>
+
+      <spacer size="small" />
+    </hstack>
+  );
+}
+
 function LiveMatchStats({
   matchData,
   selectedTabIndex,
 }: {
-  matchData: LiveMatchSegment;
+  matchData: SingleLiveMatchSegment;
   selectedTabIndex: number;
 }): JSX.Element {
   const roundInfo = matchData.rounds[selectedTabIndex];
+  const roundsLength = matchData.rounds.length - 1;
 
   return (
-    <vstack grow width="100%" height="100%" backgroundColor={CLR_WINE}>
-      <hstack width="100%" height="100%" alignment="middle center" padding="medium" gap="small">
-        <spacer grow size="medium" />
+    <hstack width="100%">
+      <vstack width={'100%'} padding="small">
+        <StatsHeading roundsLength={roundsLength} playerStat={roundInfo.team1_stats[0]} />
 
-        {/* Team 1 */}
-        <vstack grow alignment="center middle">
-          <text color={CLR_DUTCH_WHITE} size="xxlarge" weight="bold">
-            {roundInfo.team1_round_score}
-          </text>
+        <vstack alignment="start middle">
+          {roundInfo.team1_stats.map((stat) => {
+            return <PlayerStats stat={stat} roundsLength={roundsLength} />;
+          })}
         </vstack>
-        <spacer grow size="medium" />
-        {/* Team 2 */}
-        <vstack grow alignment="center middle">
-          <text color={CLR_DUTCH_WHITE} size="xxlarge" weight="bold">
-            {roundInfo.team2_round_score}
-          </text>
+
+        <spacer width={'5px'} />
+
+        <vstack alignment="start middle">
+          {roundInfo.team2_stats.map((stat) => {
+            return <PlayerStats stat={stat} roundsLength={roundsLength} />;
+          })}
         </vstack>
-        <spacer grow size="medium" />
+      </vstack>
+    </hstack>
+  );
+}
+
+function LiveMatchStatsMobile({
+  matchData,
+  selectedTabIndex,
+}: {
+  matchData: SingleLiveMatchSegment;
+  selectedTabIndex: number;
+}): JSX.Element {
+  const roundInfo = matchData.rounds[selectedTabIndex];
+  const roundsLength = matchData.rounds.length - 1;
+
+  return (
+    <hstack width="100%">
+      <vstack width={'100%'} padding="small">
+        <StatsHeadingMobile roundsLength={roundsLength} playerStat={roundInfo.team1_stats[0]} />
+
+        <vstack alignment="start middle">
+          {roundInfo.team1_stats.map((stat) => {
+            return <PlayerStatsMobile stat={stat} roundsLength={roundsLength} />;
+          })}
+        </vstack>
+
+        <spacer width={'5px'} />
+
+        <vstack alignment="start middle">
+          {roundInfo.team2_stats.map((stat) => {
+            return <PlayerStatsMobile stat={stat} roundsLength={roundsLength} />;
+          })}
+        </vstack>
+      </vstack>
+    </hstack>
+  );
+}
+
+function PlayerStats({
+  stat,
+  roundsLength,
+}: {
+  stat: PlayerStat;
+  roundsLength: number;
+}): JSX.Element {
+  return (
+    <hstack grow width={'100%'} height={'100%'} alignment="start middle">
+      <spacer size="small" />
+
+      <hstack alignment="start middle" padding="xsmall" height={'100%'} width={30} grow>
+        <image
+          url={`flags/${stat.flag.replace('flag-', '')}.png`}
+          imageHeight={14}
+          imageWidth={14}
+          height={100}
+          resizeMode="fit"
+        />
+        <spacer width={'3px'} />
+        <text alignment="start middle" color={CLR_DUTCH_WHITE} size="small">
+          {stat.name}
+        </text>
       </hstack>
-      <spacer grow size="large" />
-    </vstack>
+
+      <spacer size="small" />
+
+      {stat.agents.length > 0 && (
+        <hstack alignment="start middle" width={roundsLength * 9} grow>
+          {stat.agents.map((agent) => {
+            return (
+              <image url={`agents/${agent.toLowerCase()}.png`} imageHeight={20} imageWidth={20} />
+            );
+          })}
+        </hstack>
+      )}
+
+      <spacer size="small" />
+
+      <hstack
+        backgroundColor={CLR_DUTCH_WHITE}
+        alignment="center middle"
+        padding="xsmall"
+        width={16}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.acs}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DARK_1}
+        alignment="center middle"
+        padding="xsmall"
+        width={33}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.k} / {stat.d} / {stat.a}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DUTCH_WHITE}
+        alignment="center middle"
+        padding="xsmall"
+        width={16}
+        height={'100%'}
+        grow
+      >
+        <text
+          color={
+            stat.diff_k_d.startsWith('-')
+              ? CLR_HIGHLIGHT_RED
+              : stat.diff_k_d.startsWith('+')
+                ? CLR_HIGHLIGHT_GREEN
+                : CLR_WINE
+          }
+          size="xsmall"
+        >
+          {stat.diff_k_d}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DARK_1}
+        alignment="center middle"
+        padding="xsmall"
+        width={17}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.hs}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DUTCH_WHITE}
+        alignment="center middle"
+        padding="xsmall"
+        width={17}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.adr}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DARK_1}
+        alignment="center middle"
+        padding="xsmall"
+        width={17}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.kast}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DUTCH_WHITE}
+        alignment="center middle"
+        padding="xsmall"
+        width={17}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.fk}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DARK_1}
+        alignment="center middle"
+        padding="xsmall"
+        width={17}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.fd}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DUTCH_WHITE}
+        alignment="center middle"
+        padding="xsmall"
+        width={17}
+        height={'100%'}
+        grow
+      >
+        <text
+          color={
+            stat.diff_fk_fd.startsWith('-')
+              ? CLR_HIGHLIGHT_RED
+              : stat.diff_fk_fd.startsWith('+')
+                ? CLR_HIGHLIGHT_GREEN
+                : CLR_WINE
+          }
+          size="xsmall"
+        >
+          {stat.diff_fk_fd}
+        </text>
+      </hstack>
+
+      <spacer size="small" />
+    </hstack>
+  );
+}
+
+function PlayerStatsMobile({
+  stat,
+  roundsLength,
+}: {
+  stat: PlayerStat;
+  roundsLength: number;
+}): JSX.Element {
+  return (
+    <hstack grow width={'100%'} height={'100%'} alignment="start middle">
+      <spacer size="small" />
+
+      <hstack alignment="start middle" padding="xsmall" height={'100%'} width={30} grow>
+        <image
+          url={`flags/${stat.flag.replace('flag-', '')}.png`}
+          imageHeight={10}
+          imageWidth={10}
+          height={100}
+          resizeMode="fit"
+        />
+        <spacer width={'3px'} />
+        <text alignment="start middle" color={CLR_DUTCH_WHITE} size="xsmall">
+          {stat.name}
+        </text>
+      </hstack>
+
+      <spacer size="small" />
+
+      {stat.agents.length > 0 && (
+        <hstack alignment="start middle" width={roundsLength * 9} grow>
+          {stat.agents.map((agent) => {
+            return (
+              <image url={`agents/${agent.toLowerCase()}.png`} imageHeight={16} imageWidth={16} />
+            );
+          })}
+        </hstack>
+      )}
+
+      <spacer size="small" />
+
+      <hstack
+        backgroundColor={CLR_DUTCH_WHITE}
+        alignment="center middle"
+        padding="xsmall"
+        width={16}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.acs}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DARK_1}
+        alignment="center middle"
+        padding="xsmall"
+        width={33}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.k} / {stat.d} / {stat.a}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DUTCH_WHITE}
+        alignment="center middle"
+        padding="xsmall"
+        width={16}
+        height={'100%'}
+        grow
+      >
+        <text
+          color={
+            stat.diff_k_d.startsWith('-')
+              ? CLR_HIGHLIGHT_RED
+              : stat.diff_k_d.startsWith('+')
+                ? CLR_HIGHLIGHT_GREEN
+                : CLR_WINE
+          }
+          size="xsmall"
+        >
+          {stat.diff_k_d}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DARK_1}
+        alignment="center middle"
+        padding="xsmall"
+        width={17}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.hs}
+        </text>
+      </hstack>
+
+      <spacer width={'1px'} />
+
+      <hstack
+        backgroundColor={CLR_DUTCH_WHITE}
+        alignment="center middle"
+        padding="xsmall"
+        width={17}
+        height={'100%'}
+        grow
+      >
+        <text color={CLR_WINE} size="xsmall">
+          {stat.adr}
+        </text>
+      </hstack>
+
+      <spacer size="small" />
+    </hstack>
   );
 }

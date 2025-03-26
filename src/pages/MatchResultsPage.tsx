@@ -1,4 +1,12 @@
-import { Devvit, StateSetter, useAsync, useState } from '@devvit/public-api';
+import {
+  Devvit,
+  RedisClient,
+  RichTextBuilder,
+  StateSetter,
+  UIClient,
+  useAsync,
+  useState,
+} from '@devvit/public-api';
 import {
   CLR_DARK_1,
   CLR_DUTCH_WHITE,
@@ -6,15 +14,31 @@ import {
   CLR_HIGHLIGHT_RED,
   CLR_WINE,
 } from '../core/colors.js';
-import { PlayerStat, SingleMatchResult, SingleMatchResultSegment } from '../core/types.js';
+import {
+  PageType,
+  PlayerStat,
+  SingleMatchResult,
+  SingleMatchResultSegment,
+} from '../core/types.js';
 import { ErrorState } from 'src/components/Error.js';
 import {
   getMatchInfoFromRedis,
+  getMatchPageTypeFromRedis,
   getMatchResultFromRedis,
   postMatchResultToRedis,
 } from 'src/redis/matches.js';
 import { totalRoundTime } from 'src/utils/totalRoundTime.js';
 import { MAPS } from 'src/utils/maps.js';
+import { LoadingState } from 'src/components/Loading.js';
+import { getCommentExistsFromRedis, postCommentToRedis } from 'src/redis/comments.js';
+import { getAllUserPredictionsFromRedis } from 'src/redis/predictions.js';
+import {
+  calculatePlayerPickRates,
+  calculateSuperteamStats,
+  calculateWinPredictions,
+  getPerfectPredictors,
+  getUsernamesFromIds,
+} from 'src/core/resultsStats.js';
 
 export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
   const { postId, userId, settings, ui, cache, redis } = context;
@@ -25,6 +49,130 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
       return { name: map, show: true };
     })
   );
+  const [matchUrl, setMatchUrl] = useState<string | null>(async () => {
+    const matchInfoStr = await getMatchInfoFromRedis(redis, postId!);
+    if (!matchInfoStr) return null;
+    const { match_page } = JSON.parse(matchInfoStr) as {
+      team1: string;
+      team2: string;
+      match_page: string;
+    };
+    return match_page;
+  });
+
+  async function makeResultComment(
+    ui: UIClient,
+    redis: RedisClient,
+    postId: string,
+    data: SingleMatchResultSegment
+  ) {
+    const matchInfoExists = await getMatchInfoFromRedis(redis, postId);
+    if (!matchInfoExists) return;
+    const hasCommentBeenPosted = await getCommentExistsFromRedis(redis, postId);
+    if (hasCommentBeenPosted > 0) return;
+    const pageType = await getMatchPageTypeFromRedis(redis, postId);
+    if (!pageType || pageType != PageType.RESULTS) return;
+
+    try {
+      const post = await context.reddit.getPostById(postId!);
+      const userPreds = await getAllUserPredictionsFromRedis(redis, postId!);
+      if (!userPreds || userPreds.length == 0) return;
+
+      const superteam = calculateSuperteamStats(data, userPreds);
+      const winPredStats = calculateWinPredictions(userPreds);
+      const playerPickRates = calculatePlayerPickRates(data, userPreds);
+      const perfectScoreUsers = getPerfectPredictors(data, userPreds);
+
+      let usernames: { userId: string; username: string | undefined }[] = [];
+      if (perfectScoreUsers.length < 5) {
+        usernames = await getUsernamesFromIds(context, perfectScoreUsers);
+      }
+
+      const rtb = new RichTextBuilder();
+      rtb.heading({ level: 3 }, (h) => {
+        h.rawText('Results & Predictions');
+      });
+
+      rtb.horizontalRule();
+
+      rtb.heading({ level: 4 }, (h) => {
+        h.rawText('Final Score');
+      });
+      rtb.paragraph((p) => {
+        p.text({
+          text: `${data.team1} ${data.team1_score} - ${data.team2} ${data.team2_score}`,
+        });
+      });
+
+      rtb.horizontalRule();
+
+      rtb.heading({ level: 4 }, (h) => {
+        h.rawText(
+          `Match Superteam. Picked by ${superteam.pickedByCount} user(s) (${superteam.pickedByPercent})`
+        );
+      });
+      superteam.players.forEach((player, index) => {
+        rtb.paragraph((p) => {
+          p.text({
+            text: `${index + 1}. ${player.teamShort} ${player.name}`,
+          });
+        });
+      });
+
+      rtb.horizontalRule();
+
+      rtb.heading({ level: 4 }, (h) => {
+        h.rawText(`Score Predictions`);
+      });
+      winPredStats.forEach((pred) => {
+        rtb.paragraph((p) => {
+          p.text({
+            text: `Team: ${pred.team}. Score: ${pred.score}. ${pred.pickedByCount} pick(s) (${pred.pickedByPercent})`,
+          });
+        });
+      });
+
+      rtb.horizontalRule();
+
+      rtb.heading({ level: 4 }, (h) => {
+        h.rawText(`All players pickrate`);
+      });
+      playerPickRates.forEach((player, index) => {
+        rtb.paragraph((p) => {
+          p.text({
+            text: `${index + 1}. ${player.teamShort} ${player.name}. ${player.pickedByCount} pick(s) (${player.pickedByPercent}%)`,
+          });
+        });
+      });
+
+      rtb.horizontalRule();
+
+      rtb.heading({ level: 4 }, (h) => {
+        h.rawText(`Perfect Predictions`);
+      });
+      if (usernames.length > 0) {
+        usernames.forEach((user, index) => {
+          rtb.paragraph((p) => {
+            p.text({
+              text: `${index + 1}. ${user.username}`,
+            });
+          });
+        });
+      } else {
+        rtb.paragraph((p) => {
+          p.text({
+            text: 'No perfect predictions!',
+          });
+        });
+      }
+
+      const comment = await post.addComment({ richtext: rtb });
+      // await comment.distinguishAsAdmin();
+      await postCommentToRedis(redis, postId!);
+    } catch (error) {
+      console.error('Errororr', error);
+    }
+  }
 
   const {
     data: matchData,
@@ -44,7 +192,6 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
 
       const finalResult = await getMatchResultFromRedis(redis, postId);
       if (finalResult) {
-        console.log('Ran from redis');
         return JSON.parse(finalResult) as SingleMatchResultSegment;
       }
 
@@ -80,7 +227,7 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
           }
         },
         {
-          key: `${postId}`,
+          key: `result-${postId}`,
           ttl: 300000, // 5 min
         }
       );
@@ -90,19 +237,21 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
         if (error) {
           console.error('Failed to load data:', error);
         }
-        if (data) {
+        if (data != null) {
           const newBgMaps = data.rounds
             .filter((r) => r.map_name)
             .map((map) => {
               return { name: map.map_name, show: true };
             }) as { name: string; show: boolean }[];
           setBgMaps(newBgMaps);
+          makeResultComment(context.ui, context.redis, postId!, data);
         }
       },
     }
   );
 
-  if (!matchData || loading || error) return <ErrorState />;
+  if (error) return <ErrorState />;
+  if (!matchData || loading) return <LoadingState />;
 
   return (
     <zstack width={'100%'} height={'100%'}>
@@ -111,7 +260,7 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
           (map) =>
             map.show && (
               <image
-                url={`maps/${map.name}.png`}
+                url={`maps/${map.name === 'TBD' ? 'Haven' : map.name}.png`}
                 imageHeight={100}
                 imageWidth={100}
                 height={100}
@@ -122,9 +271,9 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
             )
         )}
       </hstack>
-      <vstack width={'100%'} height={'100%'} cornerRadius="medium">
+      <vstack width={'100%'} height={'100%'}>
         {context.dimensions?.width! > 400 ? (
-          <ResultsPageTopBar matchData={matchData} />
+          <ResultsPageTopBar matchData={matchData} url={matchUrl} />
         ) : (
           <ResultsPageTopBarMobile matchData={matchData} />
         )}
@@ -134,6 +283,8 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
         ) : (
           <ResultsMatchInfoMobile matchData={matchData} selectedTabIndex={selectedTabIndex} />
         )}
+
+        <spacer size="small" />
 
         <vstack width="100%" alignment="center middle">
           <text alignment="center middle" color={'grey'} size={`xsmall`} width={90} wrap>
@@ -169,7 +320,13 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
   );
 };
 
-function ResultsPageTopBar({ matchData }: { matchData: SingleMatchResultSegment }): JSX.Element {
+function ResultsPageTopBar({
+  matchData,
+  url,
+}: {
+  matchData: SingleMatchResultSegment;
+  url: string | null;
+}): JSX.Element {
   const { match_event, match_series, event_logo } = matchData;
   return (
     <hstack padding="small" backgroundColor={CLR_DUTCH_WHITE} alignment="start middle">
@@ -375,6 +532,7 @@ function ResultsMatchInfoMobile({
 
   return (
     <vstack width="100%">
+      <spacer size="small" />
       <hstack width={'100%'} height={'100%'}>
         <spacer grow />
 
