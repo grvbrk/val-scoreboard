@@ -4,20 +4,8 @@ import { AllUpcomingMatchSegment } from 'src/core/types.js';
 import { MAPS } from 'src/utils/maps.js';
 
 export const UpcomingPreview: Devvit.BlockComponent<{
-  upcomingMatchInfo?: AllUpcomingMatchSegment;
-}> = ({
-  upcomingMatchInfo = {
-    'team1': 'Galatasaray Esports',
-    'team2': 'BBL PCIFIC',
-    'flag1': 'flag-tr',
-    'flag2': 'flag-tr',
-    'match_series': 'League Phase: Week 2',
-    'match_event': 'Challengers League 2025 Türkiye Birlik: Split 2',
-    'match_page':
-      'https://www.vlr.gg/461265/galatasaray-esports-vs-bbl-pcific-challengers-league-2025-t-rkiye-birlik-split-2-w2',
-    'unix_timestamp': '2025-03-24 14:30:00',
-  },
-}) => {
+  upcomingMatchInfo: AllUpcomingMatchSegment;
+}> = ({ upcomingMatchInfo }) => {
   return (
     <zstack height="100%" width="100%">
       <hstack height={100} width={100}>
@@ -53,7 +41,14 @@ export const UpcomingPreview: Devvit.BlockComponent<{
               imageWidth={16}
             />
             <spacer size="xsmall" />
-            <text width={80} color={CLR_DUTCH_WHITE} size="large" weight="bold" wrap>
+            <text
+              alignment="center middle"
+              maxWidth={50}
+              color={CLR_DUTCH_WHITE}
+              size="large"
+              weight="bold"
+              wrap
+            >
               {upcomingMatchInfo.team1}
             </text>
           </hstack>
@@ -67,7 +62,14 @@ export const UpcomingPreview: Devvit.BlockComponent<{
               imageWidth={16}
             />
             <spacer size="xsmall" />
-            <text width={80} color={CLR_DUTCH_WHITE} size="large" weight="bold" wrap>
+            <text
+              alignment="center middle"
+              maxWidth={50}
+              color={CLR_DUTCH_WHITE}
+              size="large"
+              weight="bold"
+              wrap
+            >
               {upcomingMatchInfo.team2}
             </text>
           </hstack>
@@ -114,7 +116,14 @@ export const UpcomingPreviewMobile: Devvit.BlockComponent<{
               imageWidth={16}
             />
             <spacer size="xsmall" />
-            <text width={60} color={CLR_DUTCH_WHITE} size="medium" weight="bold" wrap>
+            <text
+              maxWidth={60}
+              alignment="center middle"
+              color={CLR_DUTCH_WHITE}
+              size="medium"
+              weight="bold"
+              wrap
+            >
               {upcomingMatchInfo.team1}
             </text>
           </hstack>
@@ -128,7 +137,14 @@ export const UpcomingPreviewMobile: Devvit.BlockComponent<{
               imageWidth={16}
             />
             <spacer size="xsmall" />
-            <text width={60} color={CLR_DUTCH_WHITE} size="medium" weight="bold" wrap>
+            <text
+              maxWidth={60}
+              alignment="center middle"
+              color={CLR_DUTCH_WHITE}
+              size="medium"
+              weight="bold"
+              wrap
+            >
               {upcomingMatchInfo.team2}
             </text>
           </hstack>

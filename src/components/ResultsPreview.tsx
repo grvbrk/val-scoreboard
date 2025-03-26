@@ -40,7 +40,14 @@ export const ResultsPreview: Devvit.BlockComponent<{
               imageWidth={16}
             />
             <spacer size="xsmall" />
-            <text width={80} color={CLR_DUTCH_WHITE} size="large" weight="bold" wrap>
+            <text
+              alignment="center middle"
+              maxWidth={50}
+              color={CLR_DUTCH_WHITE}
+              size="large"
+              weight="bold"
+              wrap
+            >
               {upcomingMatchInfo.team1}
             </text>
           </hstack>
@@ -54,7 +61,14 @@ export const ResultsPreview: Devvit.BlockComponent<{
               imageWidth={16}
             />
             <spacer size="xsmall" />
-            <text width={80} color={CLR_DUTCH_WHITE} size="large" weight="bold" wrap>
+            <text
+              alignment="center middle"
+              maxWidth={50}
+              color={CLR_DUTCH_WHITE}
+              size="large"
+              weight="bold"
+              wrap
+            >
               {upcomingMatchInfo.team2}
             </text>
           </hstack>
@@ -101,7 +115,14 @@ export const ResultsPreviewMobile: Devvit.BlockComponent<{
               imageWidth={16}
             />
             <spacer size="xsmall" />
-            <text width={60} color={CLR_DUTCH_WHITE} size="large" weight="bold" wrap>
+            <text
+              alignment="center middle"
+              maxWidth={50}
+              color={CLR_DUTCH_WHITE}
+              size="large"
+              weight="bold"
+              wrap
+            >
               {upcomingMatchInfo.team1}
             </text>
           </hstack>
@@ -115,7 +136,14 @@ export const ResultsPreviewMobile: Devvit.BlockComponent<{
               imageWidth={16}
             />
             <spacer size="xsmall" />
-            <text width={60} color={CLR_DUTCH_WHITE} size="large" weight="bold" wrap>
+            <text
+              alignment="center middle"
+              maxWidth={50}
+              color={CLR_DUTCH_WHITE}
+              size="large"
+              weight="bold"
+              wrap
+            >
               {upcomingMatchInfo.team2}
             </text>
           </hstack>
