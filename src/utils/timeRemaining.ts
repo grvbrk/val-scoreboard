@@ -1,14 +1,11 @@
 import { DateTime } from 'luxon';
 
-export function getTimeRemaining(
-  apiDateStr: string,
-  userTimezone: string
-): { timeLeft: string; hasTimeLeft: boolean } {
-  const targetTime = DateTime.fromFormat('2025-03-17 17:31:00', 'yyyy-MM-dd HH:mm:ss', {
+export function getTimeRemaining(apiDateStr: string): { timeLeft: string; hasTimeLeft: boolean } {
+  const targetTime = DateTime.fromFormat(apiDateStr, 'yyyy-MM-dd HH:mm:ss', {
     zone: 'UTC',
-  }).setZone(userTimezone, { keepLocalTime: false });
+  });
 
-  const now = DateTime.now().setZone(userTimezone);
+  const now = DateTime.utc();
   const diff = targetTime.diff(now, ['days', 'hours', 'minutes']).toObject();
 
   const hasTimeLeft = (diff.days ?? 0) > 0 || (diff.hours ?? 0) > 0 || (diff.minutes ?? 0) > 0;

@@ -1,9 +1,7 @@
 export function totalRoundTime(timeArray: string[]) {
   let totalSeconds = 0;
 
-  // Process each time string
   for (const time of timeArray) {
-    // Split by colon
     const parts = time.split(':');
 
     if (parts.length === 3) {
@@ -18,7 +16,6 @@ export function totalRoundTime(timeArray: string[]) {
     }
   }
 
-  // Convert total seconds back to HH:MM:SS or MM:SS
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
