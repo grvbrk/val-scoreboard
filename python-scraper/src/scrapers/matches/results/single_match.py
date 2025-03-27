@@ -36,8 +36,8 @@ def scrape_single_match_result(url: str):
     teams = match_info.select(
         ".match-header-link .match-header-link-name .wf-title-med"
     )
-    team1_name = teams[0].getText().strip()
-    team2_name = teams[1].getText().strip()
+    team1_name = teams[0].getText().strip().replace("\n", "").replace("\t", "")
+    team2_name = teams[1].getText().strip().replace("\n", "").replace("\t", "")
 
     team_logos = match_info.select(".match-header-link img")
     team1_logo = team_logos[0].get("src")
@@ -47,9 +47,18 @@ def scrape_single_match_result(url: str):
     team1_score = scores[0].getText().strip()
     team2_score = scores[2].getText().strip()
 
-    team_picks = match_info.select_one(".match-header-note").getText().strip()
+    team_picks_el = match_info.select_one(".match-header-note")
+    team_picks = team_picks_el.getText().strip() if team_picks_el else ""
 
     # _________________________________________ #
+
+    players_info = soup.select("div.vm-stats-game")[0].select("table")
+    team1_players = players_info[0].select("tbody tr")
+    team2_players = players_info[1].select("tbody tr")
+
+    team1_short = team1_players[0].select_one(".ge-text-light").getText().strip()
+    team2_short = team2_players[0].select_one(".ge-text-light").getText().strip()
+    print(team1_short, team2_short)
 
     rounds_arr = []
 
@@ -1585,6 +1594,8 @@ def scrape_single_match_result(url: str):
             "team2": team2_name,
             "logo1": team1_logo,
             "logo2": team2_logo,
+            "team1_short": team1_short,
+            "team2_short": team2_short,
             "match_series": match_series,
             "match_event": match_event,
             "event_logo": match_series_logo,
