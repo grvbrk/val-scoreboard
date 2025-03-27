@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent } from './ui/card';
-import { Player } from '../pages/PredictionPage';
 import { cn } from '../utils';
+import { Player } from '../../src/core/types';
 
 interface PlayerCardProps {
   player: Player;

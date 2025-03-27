@@ -13,6 +13,7 @@ type MatchPredictorType = {
   setScore2: React.Dispatch<React.SetStateAction<string>>;
   team1Wins: boolean;
   setTeam1Wins: React.Dispatch<React.SetStateAction<boolean>>;
+  hasUserSelected: boolean;
 };
 
 export default function MatchPredictor({
@@ -23,9 +24,16 @@ export default function MatchPredictor({
   setScore2,
   team1Wins,
   setTeam1Wins,
+  hasUserSelected,
 }: MatchPredictorType) {
   const { team1, team2, logo1, logo2, team1_short, team2_short, rounds } = upcomingMatchData;
-  const maxRounds = parseInt(rounds[2]) - 1;
+  let maxRounds;
+  const totalRounds = parseInt(rounds.includes('Map') ? rounds[0] : rounds[2]);
+  if (totalRounds === 1) {
+    maxRounds = 1;
+  } else if (totalRounds === 3) {
+    maxRounds = 2;
+  } else maxRounds = 3;
 
   const handleScoreChange = (team: '1' | '2', value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -55,11 +63,10 @@ export default function MatchPredictor({
     }
   };
   return (
-    <Card className="relative mx-auto mb-8 max-w-md border-neutral-700 bg-neutral-800/50 backdrop-blur-sm">
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-500/10 to-red-500/10"></div>
+    <Card className="border-almond text-charcoal bg-almond relative mx-auto mb-8 max-w-md backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="text-center text-red-600">Match Prediction</CardTitle>
-        <CardDescription className="text-center">
+        <CardDescription className="text-charcoal text-center">
           Predict the score for the upcoming match
         </CardDescription>
       </CardHeader>
@@ -67,6 +74,7 @@ export default function MatchPredictor({
         <div className="mb-6 flex items-center justify-center gap-2 font-medium">
           <span className={team1Wins ? 'text-red-600' : ''}>{team1_short} wins</span>
           <Switch
+            disabled={hasUserSelected}
             checked={!team1Wins}
             onCheckedChange={(checked) => {
               setTeam1Wins(!checked);
@@ -82,7 +90,7 @@ export default function MatchPredictor({
           <div className="col-span-2 flex flex-col items-center gap-2">
             <div
               className={cn(
-                'rounded-lg p-2 transition-colors',
+                'w-/ rounded-lg p-2 transition-colors',
                 team1Wins ? 'bg-primary' : 'bg-primary/30'
               )}
             >
@@ -92,7 +100,7 @@ export default function MatchPredictor({
           </div>
 
           <div className="col-span-1 flex items-center justify-center">
-            <span className="text-muted-foreground text-xl font-bold">VS</span>
+            <span className="text-xl font-bold">VS</span>
           </div>
 
           <div className="col-span-2 flex flex-col items-center gap-2">
@@ -110,6 +118,7 @@ export default function MatchPredictor({
           <div className="col-span-2 mt-4">
             <div className="flex justify-center">
               <Input
+                disabled={hasUserSelected}
                 type="text"
                 value={score1}
                 onChange={(e) => handleScoreChange('1', e.target.value)}
@@ -124,6 +133,7 @@ export default function MatchPredictor({
           <div className="col-span-2 mt-4">
             <div className="flex justify-center">
               <Input
+                disabled={hasUserSelected}
                 type="text"
                 value={score2}
                 onChange={(e) => handleScoreChange('2', e.target.value)}
@@ -136,8 +146,8 @@ export default function MatchPredictor({
 
         <div className="mt-8 text-center text-sm">
           {team1Wins
-            ? `You predict ${team1} will win ${score1}-${score2}`
-            : `You predict ${team2} will win ${score2}-${score1}`}
+            ? `You ${hasUserSelected ? 'predicted' : 'predict'} ${team1} will win ${score1}-${score2}`
+            : `You ${hasUserSelected ? 'predicted' : 'predict'} ${team2} will win ${score2}-${score1}`}
         </div>
       </CardContent>
     </Card>
