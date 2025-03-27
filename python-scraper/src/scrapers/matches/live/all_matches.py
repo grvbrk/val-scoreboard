@@ -23,14 +23,32 @@ def scrape_all_live_matches():
             teams = []
             for team in match.select(".h-match-team"):
                 teams_el = team.select_one(".h-match-team-name")
-                teams.append(teams_el.getText().strip())
+                teams.append(
+                    teams_el.getText().strip().replace("\n", "").replace("\t", "")
+                )
+
+            flags = match.select(".h-match-team i.flag")
+            flag1 = (
+                "".join(flags[0].get("class")).replace("mod-16", "").replace("mod", "")
+            )
+            flag2 = (
+                "".join(flags[1].get("class")).replace("mod-16", "").replace("mod", "")
+            )
 
             url_path = "https://www.vlr.gg/" + match.get("href")
+
+            match_series = match.select_one(".h-match-preview-series").getText().strip()
+            match_event = match.select_one(".h-match-preview-event").getText().strip()
 
             results.append(
                 {
                     "team1": teams[0],
                     "team2": teams[1],
+                    "flag1": flag1,
+                    "flag2": flag2,
+                    "match_page": url_path,
+                    "match_series": match_series,
+                    "match_event": match_event,
                     "match_page": url_path,
                 }
             )
