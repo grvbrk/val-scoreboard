@@ -49,7 +49,7 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
       return { name: map, show: true };
     })
   );
-  const [matchUrl, setMatchUrl] = useState<string | null>(async () => {
+  const [matchUrl] = useState<string | null>(async () => {
     const matchInfoStr = await getMatchInfoFromRedis(redis, postId!);
     if (!matchInfoStr) return null;
     const { match_page } = JSON.parse(matchInfoStr) as {
@@ -273,9 +273,9 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
       </hstack>
       <vstack width={'100%'} height={'100%'}>
         {context.dimensions?.width! > 400 ? (
-          <ResultsPageTopBar matchData={matchData} url={matchUrl} />
+          <ResultsPageTopBar matchData={matchData} url={matchUrl} ui={ui} />
         ) : (
-          <ResultsPageTopBarMobile matchData={matchData} />
+          <ResultsPageTopBarMobile matchData={matchData} url={matchUrl} ui={ui} />
         )}
 
         {context.dimensions?.width! > 400 ? (
@@ -323,9 +323,11 @@ export const MatchResultsPage: Devvit.BlockComponent = (_, context) => {
 function ResultsPageTopBar({
   matchData,
   url,
+  ui,
 }: {
   matchData: SingleMatchResultSegment;
   url: string | null;
+  ui: UIClient;
 }): JSX.Element {
   const { match_event, match_series, event_logo } = matchData;
   return (
@@ -348,7 +350,13 @@ function ResultsPageTopBar({
       <spacer grow size="large" />
 
       <vstack grow alignment="end middle">
-        <hstack alignment="center middle">
+        <hstack
+          alignment="center middle"
+          onPress={() => {
+            if (!url) return;
+            ui.navigateTo(url);
+          }}
+        >
           <icon size="xsmall" color={CLR_WINE} name="link-outline" />
           <text color={CLR_WINE} size="small">
             vlr.gg
@@ -363,8 +371,12 @@ function ResultsPageTopBar({
 
 function ResultsPageTopBarMobile({
   matchData,
+  url,
+  ui,
 }: {
   matchData: SingleMatchResultSegment;
+  url: string | null;
+  ui: UIClient;
 }): JSX.Element {
   const { match_event, match_series, event_logo } = matchData;
   return (
@@ -387,7 +399,13 @@ function ResultsPageTopBarMobile({
       <spacer grow size="medium" />
 
       <vstack grow alignment="start middle" maxWidth={40}>
-        <hstack alignment="center middle">
+        <hstack
+          alignment="center middle"
+          onPress={() => {
+            if (!url) return;
+            ui.navigateTo(url);
+          }}
+        >
           <icon size="xsmall" color={CLR_WINE} name="link-outline" />
           <text color={CLR_WINE} size="xsmall">
             vlr.gg

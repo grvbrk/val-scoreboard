@@ -869,6 +869,7 @@ function PlayerStats({
   stat: PlayerStat;
   roundsLength: number;
 }): JSX.Element {
+  console.log(stat);
   return (
     <hstack grow width={'100%'} height={'100%'} alignment="start middle">
       <spacer size="small" />
