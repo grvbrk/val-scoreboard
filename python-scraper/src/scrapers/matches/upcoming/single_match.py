@@ -42,7 +42,8 @@ def scrape_single_upcoming_match(url: str):
     ).get("data-utc-ts")
 
     unix_timestamp = (
-        datetime.strptime(utc_string, "%Y-%m-%d %H:%M:%S") + timedelta(hours=4)
+        datetime.strptime(utc_string, "%Y-%m-%d %H:%M:%S")
+        + timedelta(hours=4, minutes=1)
     ).strftime("%Y-%m-%d %H:%M:%S")
 
     match_time = (
@@ -65,8 +66,8 @@ def scrape_single_upcoming_match(url: str):
     teams = match_info.select(
         ".match-header-link .match-header-link-name .wf-title-med"
     )
-    team1 = teams[0].getText().strip()
-    team2 = teams[1].getText().strip()
+    team1 = teams[0].getText().strip().replace("\n", "").replace("\t", "")
+    team2 = teams[1].getText().strip().replace("\n", "").replace("\t", "")
 
     team_logos = match_info.select(".match-header-link img")
     team1_logo = team_logos[0].get("src")
