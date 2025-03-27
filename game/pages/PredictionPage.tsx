@@ -1,58 +1,59 @@
 import SuperteamSelector from '../components/SuperTeamSelector';
 import MatchPredictor from '../components/MatchPredictor';
-import { SingleUpcomingMatchSegment } from '../../src/core/types';
+import { Player, PredictionType, SingleUpcomingMatchSegment } from '../../src/core/types';
 import { useState } from 'react';
 import { sendToDevvit } from '../utils';
 
-export type Player = {
-  id: string;
-  name: string;
-  team: 'A' | 'B';
-  teamName: string;
-  teamLogo: string;
-  teamShort: string;
-  flag: string;
-};
-
 export const PredictionPage = ({
   upcomingMatchData,
+  userPreds,
 }: {
   postId: string;
   upcomingMatchData: SingleUpcomingMatchSegment;
+  userPreds: PredictionType | null;
 }) => {
   const { players1, players2, team1, team1_short, team2, team2_short, logo1, logo2, event_logo } =
     upcomingMatchData;
-  const [score1, setScore1] = useState<string>('0');
-  const [score2, setScore2] = useState<string>('0');
-  const [team1Wins, setTeam1Wins] = useState<boolean>(false);
+
+  const [hasUserSelected, setHasUserSelected] = useState<boolean>(userPreds ? true : false);
+  const [score1, setScore1] = useState<string>(userPreds?.team1ScorePred || '0');
+  const [score2, setScore2] = useState<string>(userPreds?.team2ScorePred || '0');
+  const [team1Wins, setTeam1Wins] = useState<boolean>(
+    userPreds ? userPreds.winPred === team1 : false
+  );
+  const selectedPlayerIds = new Set(userPreds?.superTeam.map((p) => p.id) ?? []);
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>([
-    ...players1.map((player) => ({
-      id: `1${player.id}`,
-      name: player.name,
-      team: 'A' as const,
-      teamLogo: logo1,
-      teamName: team1,
-      teamShort: team1_short,
-      flag: player.flag,
-    })),
-    ...players2.map((player) => ({
-      id: `2${player.id}`,
-      name: player.name,
-      team: 'B' as const,
-      teamLogo: logo2,
-      teamName: team2,
-      teamShort: team2_short,
-      flag: player.flag,
-    })),
+    ...players1
+      .filter((player) => !selectedPlayerIds.has(`1${player.id}`))
+      .map((player) => ({
+        id: `1${player.id}`,
+        name: player.name,
+        team: 'A' as const,
+        teamLogo: logo1,
+        teamName: team1,
+        teamShort: team1_short,
+        flag: player.flag,
+      })),
+    ...players2
+      .filter((player) => !selectedPlayerIds.has(`2${player.id}`))
+      .map((player) => ({
+        id: `2${player.id}`,
+        name: player.name,
+        team: 'B' as const,
+        teamLogo: logo2,
+        teamName: team2,
+        teamShort: team2_short,
+        flag: player.flag,
+      })),
   ]);
-  const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<Player[]>(userPreds?.superTeam ?? []);
 
   function handleSubmitTeam() {
     const userPred = {
       winPred: team1Wins ? team1 : team2,
       team1ScorePred: score1,
       team2ScorePred: score2,
-      superTeam: selectedPlayers.map((p) => p.name),
+      superTeam: selectedPlayers,
     };
     sendToDevvit({
       type: 'SEND_USER_PREDS',
@@ -90,6 +91,7 @@ export const PredictionPage = ({
           setScore2={setScore2}
           team1Wins={team1Wins}
           setTeam1Wins={setTeam1Wins}
+          hasUserSelected={hasUserSelected}
         />
         <SuperteamSelector
           upcomingMatchData={upcomingMatchData}
@@ -98,6 +100,15 @@ export const PredictionPage = ({
           selectedPlayers={selectedPlayers}
           setSelectedPlayers={setSelectedPlayers}
           handleSubmitTeam={handleSubmitTeam}
+          hasUserSelected={hasUserSelected}
+          setHasUserSelected={setHasUserSelected}
+          team1wins={team1Wins}
+          score1={score1}
+          score2={score2}
+          team1_short={team1_short}
+          team2_short={team2_short}
+          logo1={logo1}
+          logo2={logo2}
         />
       </div>
     </main>
