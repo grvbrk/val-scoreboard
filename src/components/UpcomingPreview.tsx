@@ -108,6 +108,7 @@ export const UpcomingPreviewMobile: Devvit.BlockComponent<{
         </text>
 
         <spacer size="small" />
+
         <hstack alignment="center middle" width={100}>
           <hstack width={50} alignment="end middle">
             <image

@@ -99,14 +99,15 @@ export const ResultsPreviewMobile: Devvit.BlockComponent<{
         })}
       </hstack>
       <vstack height="100%" width="100%" alignment="middle center">
-        <text size="xlarge" weight="bold" color={CLR_DUTCH_WHITE} wrap alignment="center middle">
+        <text size="medium" weight="bold" color={CLR_DUTCH_WHITE} wrap alignment="center middle">
           {upcomingMatchInfo.match_event}
         </text>
-        <text size="small" color={CLR_DUTCH_WHITE} alignment="center middle">
+        <text size="xsmall" color={CLR_DUTCH_WHITE} alignment="center middle">
           {upcomingMatchInfo.match_series} • Results
         </text>
 
-        <spacer size="medium" />
+        <spacer size="small" />
+
         <hstack alignment="center middle" width={100}>
           <hstack width={50} alignment="end middle">
             <image
@@ -119,16 +120,16 @@ export const ResultsPreviewMobile: Devvit.BlockComponent<{
               alignment="center middle"
               maxWidth={50}
               color={CLR_DUTCH_WHITE}
-              size="large"
+              size="medium"
               weight="bold"
               wrap
             >
               {upcomingMatchInfo.team1}
             </text>
           </hstack>
-          <spacer size="large" />
+          <spacer size="medium" />
           <text color={CLR_DUTCH_WHITE}>vs</text>
-          <spacer size="large" />
+          <spacer size="medium" />
           <hstack width={50} alignment="start middle">
             <image
               url={`flags/${upcomingMatchInfo.flag2.replace('flag-', '')}.png`}
@@ -140,7 +141,7 @@ export const ResultsPreviewMobile: Devvit.BlockComponent<{
               alignment="center middle"
               maxWidth={50}
               color={CLR_DUTCH_WHITE}
-              size="large"
+              size="medium"
               weight="bold"
               wrap
             >
