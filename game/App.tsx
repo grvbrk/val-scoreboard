@@ -58,7 +58,7 @@ export const App = () => {
   }, [initData, setPostId]);
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-neutral-900 via-neutral-900 to-red-800">
+    <div>
       {upcomingMatchData ? (
         getPage(page, { postId, upcomingMatchData, userPreds })
       ) : (
