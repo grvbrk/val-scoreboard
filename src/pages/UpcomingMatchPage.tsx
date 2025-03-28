@@ -164,7 +164,7 @@ export const UpcomingMatchPage: Devvit.BlockComponent<{
     updatePostPreview(context);
   }
 
-  const { mount } = useWebView<WebviewToBlockMessage, BlocksToWebviewMessage>({
+  const { mount, unmount } = useWebView<WebviewToBlockMessage, BlocksToWebviewMessage>({
     onMessage: async (event, { postMessage }) => {
       const data = event as unknown as WebviewToBlockMessage;
 
@@ -182,6 +182,7 @@ export const UpcomingMatchPage: Devvit.BlockComponent<{
           break;
 
         case 'SEND_USER_PREDS':
+          unmount();
           await postUserPredToRedis(redis, postId!, userId!, data.payload);
           setPredsSubmitted(true);
           break;
